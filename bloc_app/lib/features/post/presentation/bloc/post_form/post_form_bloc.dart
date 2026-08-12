@@ -16,14 +16,21 @@ part 'post_form_state.dart';
 @injectable
 class PostFormBloc extends Bloc<PostFormEvent, PostFormState> {
   PostFormBloc({
-    required this._createPostUsecase,
-    required this._uploadPostImageUsecase,
+    required this._createPostUseCase,
+    required this._uploadPostImageUseCase,
+    required this._updatePostUseCase,
+    required this._getPostDetailUseCase,
     required this._globalEventBus,
   }) : super(const PostFormInitial()) {
     on<PostSubmitted>(_onPostSubmitted);
+    on<PostFormPrefilled>(_onPostFormPrefilled);
+    on<PostEdited>(_onPostEdited);
   }
-  final CreatePostUsecase _createPostUsecase;
-  final UploadPostImageUsecase _uploadPostImageUsecase;
+
+  final CreatePostUsecase _createPostUseCase;
+  final UploadPostImageUsecase _uploadPostImageUseCase;
+  final UpdatePostUsecase _updatePostUseCase;
+  final GetPostDetailUsecase _getPostDetailUseCase;
   final GlobalEventBus _globalEventBus;
 
   Future<void> _onPostSubmitted(
@@ -36,9 +43,10 @@ class PostFormBloc extends Bloc<PostFormEvent, PostFormState> {
     String? postId;
 
     if (event.imageFile != null) {
-      final uploadResult = await _uploadPostImageUsecase(
+      final uploadResult = await _uploadPostImageUseCase(
         UploadPostImageParams(image: event.imageFile!, postId: null),
       );
+
       final success = uploadResult.fold(
         (failure) {
           emit(PostFormLoadFailure(failure: failure));
@@ -53,14 +61,15 @@ class PostFormBloc extends Bloc<PostFormEvent, PostFormState> {
       if (!success) return;
     }
 
-    final createResult = await _createPostUsecase(
+    final createResult = await _createPostUseCase(
       CreatePostParams(
+        postId: postId,
         title: event.title,
         content: event.content,
-        postId: postId,
         imageUrl: imageUrl,
       ),
     );
+
     createResult.fold(
       (failure) {
         emit(PostFormLoadFailure(failure: failure));
@@ -70,5 +79,49 @@ class PostFormBloc extends Bloc<PostFormEvent, PostFormState> {
         emit(PostFormLoadSuccess(data: newPost));
       },
     );
+  }
+
+  Future<void> _onPostFormPrefilled(
+    PostFormPrefilled event,
+    Emitter<PostFormState> emit,
+  ) async {
+    emit(const PostFormLoadInProgress());
+
+    final result = await _getPostDetailUseCase(event.postId);
+
+    result.fold(
+      (failure) => emit(PostFormLoadFailure(failure: failure)),
+      (post) => emit(PostFormLoadSuccess(data: post)),
+    );
+  }
+
+  Future<void> _onPostEdited(
+    PostEdited event,
+    Emitter<PostFormState> emit,
+  ) async {
+    emit(const PostFormLoadInProgress());
+
+    await Future.delayed(const Duration(seconds: 1));
+
+    try {
+      final result = await _updatePostUseCase(
+        UpdatePostParams(
+          originalPost: event.originalPost,
+          newTitle: event.newTitle,
+          newContent: event.newContent,
+          newImageFile: event.newImage,
+          imageWasRemoved: event.imageWasRemoved,
+        ),
+      );
+
+      result.fold((failure) => emit(PostFormLoadFailure(failure: failure)), (
+        updatedPost,
+      ) {
+        _globalEventBus.add(PostUpdateDispatched(post: updatedPost));
+        emit(PostFormLoadSuccess(data: updatedPost));
+      });
+    } catch (e) {
+      emit(PostFormLoadFailure(failure: UnknownFailure(message: e.toString())));
+    }
   }
 }

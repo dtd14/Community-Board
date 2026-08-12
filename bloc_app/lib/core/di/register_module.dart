@@ -52,4 +52,31 @@ abstract class RegisterModule {
 
   @injectable
   UploadPostImageUsecase get uploadPostImageUsecase;
+
+  @injectable
+  GetPostDetailUsecase get getPostDetailUsecase;
+
+  @injectable
+  GetCommentsUsecase get getCommentsUsecase;
+
+  @injectable
+  ToggleLikeUsecase get toggleLikeUsecase;
+
+  @injectable
+  CreateCommentUsecase get createCommentUsecase;
+
+  @injectable
+  UpdateCommentUsecase get updateCommentUsecase;
+
+  @injectable
+  DeleteCommentUsecase get deleteCommentUsecase;
+
+  @injectable
+  DeletePostUsecase get deletePostUsecase;
+
+  @injectable
+  DeletePostFolderUsecase get deletePostFolderUsecase;
+
+  @injectable
+  UpdatePostUsecase get updatePostUsecase;
 }

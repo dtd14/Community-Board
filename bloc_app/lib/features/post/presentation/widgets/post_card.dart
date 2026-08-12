@@ -111,13 +111,14 @@ class PostCard extends StatelessWidget {
                   ),
                 ),
               ],
+              const SizedBox(height: 16),
               Text(post.content, maxLines: 5, overflow: TextOverflow.ellipsis),
               const Divider(height: 32),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   IconButton(
-                    onPressed: () {},
+                    onPressed: onToggleLike,
                     icon: Icon(
                       post.currentUserLiked
                           ? Icons.thumb_up

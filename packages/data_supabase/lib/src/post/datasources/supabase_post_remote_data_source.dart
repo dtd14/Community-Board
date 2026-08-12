@@ -6,6 +6,8 @@ import 'package:domain/post.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../models/comment_display_model.dart';
+import '../models/like_result_model.dart';
 import '../models/post_display_model.dart';
 import 'post_remote_data_source.dart';
 
@@ -115,13 +117,313 @@ class SupabasePostRemoteDataSource implements PostRemoteDataSource {
       final imageUrl = _supabaseClient.storage
           .from(Storage.postImages)
           .getPublicUrl(imagePath);
-          
+
       return ImageUploadResult(postId: finalPostId, imageUrl: imageUrl);
-      
     } on AuthenticationException {
       rethrow;
     } on StorageException catch (e) {
       throw StorageServerException(message: e.message);
+    } on SocketException {
+      throw const NetworkException();
+    } catch (e) {
+      throw UnknownException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<List<CommentDisplayModel>> getComments({
+    required String postId,
+    required int offset,
+    required int limit,
+  }) async {
+    try {
+      if (_supabaseClient.auth.currentUser == null) {
+        throw const AuthenticationException(
+          message: 'User is not authenticated',
+        );
+      }
+      final to = offset + limit - 1;
+      final commentMaps = await _supabaseClient
+          .from(Views.commentDisplayView)
+          .select()
+          .eq('post_id', postId)
+          .range(offset, to);
+      return commentMaps
+          .map((map) => CommentDisplayModel.fromJson(map))
+          .toList();
+    } on AuthenticationException {
+      rethrow;
+    } on PostgrestException catch (e) {
+      if (e.code == PostgresError.insufficientPrivilege) {
+        throw PermissonException(message: e.message);
+      }
+      if (e.code == PostgresError.moreThenOneOrNoItemsReturned) {
+        throw NotFountException(message: e.message);
+      }
+      throw DatabaseException(message: e.message);
+    } on SocketException {
+      throw const NetworkException();
+    } catch (e) {
+      throw UnknownException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<PostDisplayModel> getPostDetail({required String postId}) async {
+    try {
+      if (_supabaseClient.auth.currentUser == null) {
+        throw const AuthenticationException(
+          message: 'User is not authenticated',
+        );
+      }
+
+      final postDisplayModelMap = await _supabaseClient
+          .from(Views.postDisplayView)
+          .select()
+          .eq('post_id', postId)
+          .single();
+      return PostDisplayModel.fromJson(postDisplayModelMap);
+    } on AuthenticationException {
+      rethrow;
+    } on PostgrestException catch (e) {
+      if (e.code == PostgresError.insufficientPrivilege) {
+        throw PermissonException(message: e.message);
+      }
+      if (e.code == PostgresError.moreThenOneOrNoItemsReturned) {
+        throw NotFountException(message: e.message);
+      }
+      throw DatabaseException(message: e.message);
+    } on SocketException {
+      throw const NetworkException();
+    } catch (e) {
+      throw UnknownException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<LikeResultModel> toggleLike({required String postId}) async {
+    try {
+      if (_supabaseClient.auth.currentUser == null) {
+        throw const AuthenticationException(
+          message: 'User is not authenticated.',
+        );
+      }
+      final result = await _supabaseClient.rpc(
+        DBFunctions.handleLike,
+        params: {'p_post_id': postId},
+      );
+      return LikeResultModel.fromJson(result as Map<String, dynamic>);
+    } on AuthenticationException {
+      rethrow;
+    } on PostgrestException catch (e) {
+      if (e.code == PostgresError.insufficientPrivilege) {
+        throw PermissonException(message: e.message);
+      }
+      if (e.code == PostgresError.moreThenOneOrNoItemsReturned) {
+        throw NotFountException(message: e.message);
+      }
+      throw DatabaseException(message: e.message);
+    } on SocketException {
+      throw const NetworkException();
+    } catch (e) {
+      throw UnknownException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<CommentDisplayModel> createComment({
+    required String postId,
+    required String content,
+  }) async {
+    try {
+      if (_supabaseClient.auth.currentUser == null) {
+        throw const AuthenticationException(
+          message: 'User is not authenticated',
+        );
+      }
+      final result = await _supabaseClient
+          .rpc(
+            DBFunctions.createCommentAndReturnCommentDisplayView,
+            params: {'p_post_id': postId, 'p_content': content},
+          )
+          .single();
+
+      return CommentDisplayModel.fromJson(result);
+    } on AuthenticationException {
+      rethrow;
+    } on PostgrestException catch (e) {
+      if (e.code == PostgresError.insufficientPrivilege) {
+        throw PermissonException(message: e.message);
+      }
+      if (e.code == PostgresError.moreThenOneOrNoItemsReturned) {
+        throw NotFountException(message: e.message);
+      }
+      throw DatabaseException(message: e.message);
+    } on SocketException {
+      throw const NetworkException();
+    } catch (e) {
+      throw UnknownException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> deleteComment({required String commentId}) async {
+    try {
+      if (_supabaseClient.auth.currentUser == null) {
+        throw const AuthenticationException(
+          message: 'User is not authenticated',
+        );
+      }
+      await _supabaseClient.from(Tables.comments).delete().match({
+        'id': commentId,
+      });
+    } on AuthenticationException {
+      rethrow;
+    } on PostgrestException catch (e) {
+      if (e.code == PostgresError.insufficientPrivilege) {
+        throw PermissonException(message: e.message);
+      }
+      if (e.code == PostgresError.moreThenOneOrNoItemsReturned) {
+        throw NotFountException(message: e.message);
+      }
+      throw DatabaseException(message: e.message);
+    } on SocketException {
+      throw const NetworkException();
+    } catch (e) {
+      throw UnknownException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<CommentDisplayModel> updateComment({
+    required String commentId,
+    required String newContent,
+  }) async {
+    try {
+      if (_supabaseClient.auth.currentUser == null) {
+        throw const AuthenticationException(
+          message: 'User is not authenticated',
+        );
+      }
+      final updatedCommentMap = await _supabaseClient
+          .rpc(
+            DBFunctions.updateCommentAndReturnCommentDisplayView,
+            params: {'p_comment_id': commentId, 'p_new_content': newContent},
+          )
+          .single();
+      return CommentDisplayModel.fromJson(updatedCommentMap);
+    } on AuthenticationException {
+      rethrow;
+    } on PostgrestException catch (e) {
+      if (e.code == PostgresError.insufficientPrivilege) {
+        throw PermissonException(message: e.message);
+      }
+      if (e.code == PostgresError.moreThenOneOrNoItemsReturned) {
+        throw NotFountException(message: e.message);
+      }
+      throw DatabaseException(message: e.message);
+    } on SocketException {
+      throw const NetworkException();
+    } catch (e) {
+      throw UnknownException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> deletePost({required String postId}) async {
+    try {
+      if (_supabaseClient.auth.currentUser == null) {
+        throw const AuthenticationException(
+          message: "User is not authenticated",
+        );
+      }
+
+      await _supabaseClient.from(Tables.posts).delete().match({'id': postId});
+    } on PostgrestException catch (e) {
+      if (e.code == PostgresError.insufficientPrivilege) {
+        throw PermissonException(message: e.message);
+      }
+      if (e.code == PostgresError.moreThenOneOrNoItemsReturned) {
+        throw NotFountException(message: e.message);
+      }
+      throw DatabaseException(message: e.message);
+    } on SocketException {
+      throw const NetworkException();
+    } catch (e) {
+      throw UnknownException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> deletePostFolder({required String postId}) async {
+    try {
+      final userId = _supabaseClient.auth.currentUser?.id;
+      if (userId == null) {
+        throw const AuthenticationException(
+          message: 'User not authenticated for deletion',
+        );
+      }
+      final folderPath = 'public/$userId/$postId';
+
+      final fileList = await _supabaseClient.storage
+          .from(Storage.postImages)
+          .list(path: folderPath);
+      if (fileList.isEmpty) {
+        return;
+      }
+      final filesToRemove = fileList
+          .map((file) => '$folderPath/${file.name}')
+          .toList();
+      await _supabaseClient.storage
+          .from(Storage.postImages)
+          .remove(filesToRemove);
+    } on AuthenticationException {
+      rethrow;
+    } on StorageException catch (e) {
+      throw StorageServerException(message: e.message);
+    } on SocketException {
+      throw const NetworkException();
+    } catch (e) {
+      throw UnknownException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<PostDisplayModel> updatePost({
+    required String postId,
+    required String title,
+    required String content,
+    String? imageUrl,
+  }) async {
+    try {
+      if (_supabaseClient.auth.currentUser == null) {
+        throw const AuthenticationException(
+          message: 'User is not authenticated',
+        );
+      }
+
+      final result = await _supabaseClient
+          .rpc(
+            DBFunctions.updatePostAndReturnPostDisplayView,
+            params: {
+              'p_post_id': postId,
+              'p_title': title,
+              'p_content': content,
+              'p_image_url': imageUrl,
+            },
+          )
+          .single();
+      return PostDisplayModel.fromJson(result);
+    } on AuthenticationException {
+      rethrow;
+    } on PostgrestException catch (e) {
+      if (e.code == PostgresError.insufficientPrivilege) {
+        throw PermissonException(message: e.message);
+      }
+      if (e.code == PostgresError.moreThenOneOrNoItemsReturned) {
+        throw NotFountException(message: e.message);
+      }
+      throw DatabaseException(message: e.message);
     } on SocketException {
       throw const NetworkException();
     } catch (e) {

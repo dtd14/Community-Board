@@ -22,6 +22,10 @@ import '../../features/auth/presentation/bloc/authentication/authentication_bloc
     as _i226;
 import '../../features/auth/presentation/bloc/login/login_bloc.dart' as _i208;
 import '../../features/auth/presentation/bloc/signup/signup_bloc.dart' as _i173;
+import '../../features/post/presentation/bloc/comments_list/comments_list_bloc.dart'
+    as _i270;
+import '../../features/post/presentation/bloc/post_detail/post_detail_bloc.dart'
+    as _i557;
 import '../../features/post/presentation/bloc/post_form/post_form_bloc.dart'
     as _i686;
 import '../../features/post/presentation/bloc/post_list/post_list_bloc.dart'
@@ -68,10 +72,32 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i456.UploadPostImageUsecase>(
       () => registerModule.uploadPostImageUsecase,
     );
+    gh.factory<_i456.GetPostDetailUsecase>(
+      () => registerModule.getPostDetailUsecase,
+    );
+    gh.factory<_i456.GetCommentsUsecase>(
+      () => registerModule.getCommentsUsecase,
+    );
+    gh.factory<_i456.ToggleLikeUsecase>(() => registerModule.toggleLikeUsecase);
+    gh.factory<_i456.CreateCommentUsecase>(
+      () => registerModule.createCommentUsecase,
+    );
+    gh.factory<_i456.UpdateCommentUsecase>(
+      () => registerModule.updateCommentUsecase,
+    );
+    gh.factory<_i456.DeleteCommentUsecase>(
+      () => registerModule.deleteCommentUsecase,
+    );
+    gh.factory<_i456.DeletePostUsecase>(() => registerModule.deletePostUsecase);
+    gh.factory<_i456.DeletePostFolderUsecase>(
+      () => registerModule.deletePostFolderUsecase,
+    );
+    gh.factory<_i456.UpdatePostUsecase>(() => registerModule.updatePostUsecase);
     gh.factory<_i293.PostListBloc>(
       () => _i293.PostListBloc(
         getPostsUsecase: gh<_i456.GetPostsUsecase>(),
         globalEventBus: gh<_i91.GlobalEventBus>(),
+        toggleLikeUsecase: gh<_i456.ToggleLikeUsecase>(),
       ),
     );
     gh.singleton<_i583.GoRouter>(
@@ -82,8 +108,29 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.factory<_i686.PostFormBloc>(
       () => _i686.PostFormBloc(
-        createPostUsecase: gh<_i456.CreatePostUsecase>(),
-        uploadPostImageUsecase: gh<_i456.UploadPostImageUsecase>(),
+        createPostUseCase: gh<_i456.CreatePostUsecase>(),
+        uploadPostImageUseCase: gh<_i456.UploadPostImageUsecase>(),
+        updatePostUseCase: gh<_i456.UpdatePostUsecase>(),
+        getPostDetailUseCase: gh<_i456.GetPostDetailUsecase>(),
+        globalEventBus: gh<_i91.GlobalEventBus>(),
+      ),
+    );
+    gh.factory<_i557.PostDetailBloc>(
+      () => _i557.PostDetailBloc(
+        getPostDetailUsecase: gh<_i456.GetPostDetailUsecase>(),
+        toggleLikeUsecase: gh<_i456.ToggleLikeUsecase>(),
+        globalEventBus: gh<_i91.GlobalEventBus>(),
+        deletePostUsecase: gh<_i456.DeletePostUsecase>(),
+        deletePostFolderUsecase: gh<_i456.DeletePostFolderUsecase>(),
+      ),
+    );
+    gh.factory<_i270.CommentsListBloc>(
+      () => _i270.CommentsListBloc(
+        getCommentsUsecase: gh<_i456.GetCommentsUsecase>(),
+        createCommentUsecase: gh<_i456.CreateCommentUsecase>(),
+        deleteCommentUsecase: gh<_i456.DeleteCommentUsecase>(),
+        updateCommentUsecase: gh<_i456.UpdateCommentUsecase>(),
+        getPostDetailUsecase: gh<_i456.GetPostDetailUsecase>(),
         globalEventBus: gh<_i91.GlobalEventBus>(),
       ),
     );
@@ -143,4 +190,50 @@ class _$RegisterModule extends _i291.RegisterModule {
       _i456.UploadPostImageUsecase(
         postRepository: _getIt<_i456.PostRepository>(),
       );
+
+  @override
+  _i456.GetPostDetailUsecase get getPostDetailUsecase =>
+      _i456.GetPostDetailUsecase(
+        postRepository: _getIt<_i456.PostRepository>(),
+      );
+
+  @override
+  _i456.GetCommentsUsecase get getCommentsUsecase =>
+      _i456.GetCommentsUsecase(postRepository: _getIt<_i456.PostRepository>());
+
+  @override
+  _i456.ToggleLikeUsecase get toggleLikeUsecase =>
+      _i456.ToggleLikeUsecase(postRepository: _getIt<_i456.PostRepository>());
+
+  @override
+  _i456.CreateCommentUsecase get createCommentUsecase =>
+      _i456.CreateCommentUsecase(
+        postRepository: _getIt<_i456.PostRepository>(),
+      );
+
+  @override
+  _i456.UpdateCommentUsecase get updateCommentUsecase =>
+      _i456.UpdateCommentUsecase(
+        postRepository: _getIt<_i456.PostRepository>(),
+      );
+
+  @override
+  _i456.DeleteCommentUsecase get deleteCommentUsecase =>
+      _i456.DeleteCommentUsecase(
+        postRepository: _getIt<_i456.PostRepository>(),
+      );
+
+  @override
+  _i456.DeletePostUsecase get deletePostUsecase =>
+      _i456.DeletePostUsecase(postRepository: _getIt<_i456.PostRepository>());
+
+  @override
+  _i456.DeletePostFolderUsecase get deletePostFolderUsecase =>
+      _i456.DeletePostFolderUsecase(
+        postRepository: _getIt<_i456.PostRepository>(),
+      );
+
+  @override
+  _i456.UpdatePostUsecase get updatePostUsecase =>
+      _i456.UpdatePostUsecase(postRepository: _getIt<_i456.PostRepository>());
 }

@@ -146,7 +146,14 @@ class _PostsViewState extends State<PostsView> {
                           : const SizedBox.shrink();
                     }
                     final post = state.posts[index];
-                    return PostCard(post: post, onToggleLike: () {});
+                    return PostCard(
+                      post: post,
+                      onToggleLike: () {
+                        context.read<PostListBloc>().add(
+                          PostLikeToggled(post: post),
+                        );
+                      },
+                    );
                   },
                 ),
               );
