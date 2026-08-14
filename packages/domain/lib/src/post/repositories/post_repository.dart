@@ -52,4 +52,12 @@ abstract interface class PostRepository {
     required String content,
     String? imageUrl,
   });
+
+  Future<Either<Failures, List<PostDisplay>>> getMyPost({
+    required String userId,
+    required int offset,
+    required int limit,
+  });
+
+  
 }

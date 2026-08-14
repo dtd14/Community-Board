@@ -49,7 +49,7 @@ class PostCard extends StatelessWidget {
                     CircleAvatar(
                       radius: 20,
                       backgroundColor: Colors.blueGrey,
-                      child: post.authorAvatarUrl == null
+                      child: (post.authorAvatarUrl == null || post.authorAvatarUrl!.isNotEmpty)
                           ? const Icon(
                               Icons.person,
                               size: 20,

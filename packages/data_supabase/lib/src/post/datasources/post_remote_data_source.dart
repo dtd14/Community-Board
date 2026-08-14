@@ -52,4 +52,10 @@ abstract interface class PostRemoteDataSource {
     required String content,
     String? imageUrl,
   });
+
+  Future<List<PostDisplayModel>> getMyPosts({
+    required String userId,
+    required int offset,
+    required int limit,
+  });
 }

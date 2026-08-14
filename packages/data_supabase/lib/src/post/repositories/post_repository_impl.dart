@@ -296,4 +296,32 @@ class PostRepositoryImpl implements PostRepository {
       return Left(UnknownFailure(message: e.message));
     }
   }
+
+  @override
+  Future<Either<Failures, List<PostDisplay>>> getMyPost({
+    required String userId,
+    required int offset,
+    required int limit,
+  }) async {
+    try {
+      final posts = await _postRemoteDataSource.getMyPosts(
+        userId: userId,
+        offset: offset,
+        limit: limit,
+      );
+      return Right(posts);
+    } on NotFountException catch (e) {
+      return Left(NotFoundFailure(message: e.message));
+    } on AuthenticationException catch (e) {
+      return Left(AuthenticationFailure(message: e.message));
+    } on PermissonException catch (e) {
+      return Left(PermissionFailure(message: e.message));
+    } on DatabaseException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
+    } on UnknownException catch (e) {
+      return Left(UnknownFailure(message: e.message));
+    }
+  }
 }

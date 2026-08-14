@@ -1,7 +1,11 @@
 import 'package:data_supabase/auth.dart';
 import 'package:data_supabase/post.dart';
+import 'package:data_supabase/profile.dart';
+import 'package:data_supabase/search.dart';
 import 'package:domain/auth.dart';
 import 'package:domain/post.dart';
+import 'package:domain/profile.dart';
+import 'package:domain/search.dart';
 import 'package:go_router/go_router.dart';
 import 'package:injectable/injectable.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -31,6 +35,20 @@ abstract class RegisterModule {
 
   @LazySingleton(as: PostRepository)
   PostRepositoryImpl get postRepository;
+
+  // profile
+  @LazySingleton(as: ProfileRemoteDataSource)
+  SupabaseProfileRemoteDataSource get profileRemoteDataSource;
+
+  @LazySingleton(as: ProfileRepository)
+  ProfileRepositoryImpl get profileRepository;
+
+  // search
+  @LazySingleton(as: SearchRemoteDataSource)
+  SupabaseSearchRemoteDataSource get searchRemoteDataSource;
+
+  @LazySingleton(as: SearchRepository)
+  SearchRepositoryImpl get searchRepository;
 
   // Domain Layer (UseCases) Registration (Injectable - factory)
   // auth
@@ -79,4 +97,21 @@ abstract class RegisterModule {
 
   @injectable
   UpdatePostUsecase get updatePostUsecase;
+
+  @injectable
+  GetMyPostUsecase get getMyPostUsecase;
+
+  // profile
+  @injectable
+  GetProfileUsecase get getProfileUsecase;
+
+  @injectable
+  UpdateProfileUsecase get updateProfileUsecase;
+
+  // search
+  @injectable
+  SearchPostUsecase get searchPostUsecase;
+
+  @injectable
+  SearchUsersUsecase get searchUsersUsecase;
 }

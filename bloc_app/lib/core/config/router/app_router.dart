@@ -1,3 +1,4 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../features/auth/presentation/bloc/authentication/authentication_bloc.dart';
@@ -7,6 +8,7 @@ import '../../../features/auth/presentation/pages/signup_page.dart';
 import '../../../features/post/presentation/pages/post_detail_page.dart';
 import '../../../features/post/presentation/pages/post_form_page.dart';
 import '../../../features/post/presentation/pages/post_page.dart';
+import '../../../features/profile/presentation/blocs/profile/profile_bloc.dart';
 import '../../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../../features/profile/presentation/pages/my_profile_page.dart';
 import '../../../features/profile/presentation/pages/user_profile_page.dart';
@@ -122,7 +124,13 @@ GoRouter createRouter(AuthenticationBloc authBloc) {
                   GoRoute(
                     path: RoutePaths.profileEdit,
                     name: RouteNames.profileEdit,
-                    builder: (context, state) => const EditProfilePage(),
+                    builder: (context, state) {
+                      final profileBloc = state.extra as ProfileBloc;
+                      return BlocProvider.value(
+                        value: profileBloc,
+                        child: const EditProfilePage(),
+                      );
+                    },
                   ),
                 ],
               ),

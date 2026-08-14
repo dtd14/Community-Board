@@ -169,6 +169,18 @@ class PostListBloc extends Bloc<PostListEvent, PostListState> {
         emit(state.copyWith(posts: newPosts));
 
         add(_PostListRefillRequested());
+      case ProfileUpdatedDispatched(profile: final updatedProfile):
+        final currentPosts = state.posts;
+        final newPosts = currentPosts.map((post) {
+          if (post.authorId == updatedProfile.id) {
+            return post.copyWith(
+              authorUsername: updatedProfile.username,
+              authorAvatarUrl: () => updatedProfile.avatarUrl,
+            );
+          }
+          return post;
+        }).toList();
+        emit(state.copyWith(posts: newPosts));
     }
   }
 
