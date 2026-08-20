@@ -7,6 +7,8 @@ import 'package:injectable/injectable.dart';
 
 import '../../../../../core/bus/global_event.dart';
 import '../../../../../core/bus/global_event_bus.dart';
+import '../../handlers/pagination_handler.dart';
+import '../../handlers/toggle_like_handler.dart';
 import '../post_list/post_list_bloc.dart';
 
 part 'my_post_list_event.dart';
@@ -34,11 +36,20 @@ class MyPostListBloc extends Bloc<MyPostListEvent, MyPostListState> {
     _globalEventBusSubscription = _globalEventBus.stream.listen((event) {
       add(_GlobalEventReceived(event: event));
     });
+
+    _paginationHandler = PaginationHandler();
+    _toggleLikeHandler = ToggleLikeHandler(
+      toggleLikeUseCase: _toggleLikeUsecase,
+      globalEventBus: _globalEventBus,
+    );
   }
 
   final GetMyPostUsecase _getMyPostUsecase;
   final ToggleLikeUsecase _toggleLikeUsecase;
   final GlobalEventBus _globalEventBus;
+
+  late final PaginationHandler<MyPostListState> _paginationHandler;
+  late final ToggleLikeHandler<MyPostListState> _toggleLikeHandler;
 
   StreamSubscription<GlobalEvent>? _globalEventBusSubscription;
 
@@ -89,32 +100,61 @@ class MyPostListBloc extends Bloc<MyPostListEvent, MyPostListState> {
 
     emit(state.copyWith(status: MyPostListStatus.fetchingNextPage));
 
-    await Future.delayed(const Duration(seconds: 1));
-
-    final result = await _getMyPostUsecase(
-      GetMyPostParams(
-        userId: event.userId,
-        offset: state.posts.length,
-        limit: _pageSize,
-      ),
+    final newState = await _paginationHandler.fetchNextPage(
+      currentState: state,
+      fetchPostsStrategy: ({required int offset, required int limit}) {
+        return _getMyPostUsecase(
+          GetMyPostParams(userId: event.userId, offset: offset, limit: limit),
+        );
+      },
+      pagesize: _pageSize,
+      getLastestState: () => state,
+      getPosts: (state) => state.posts,
+      copyWithPosts: (state, newPosts) => state.copyWith(posts: newPosts),
+      copyWithHasReachedMax: (state, hasReachedMax) =>
+          state.copyWith(hasReachedMax: hasReachedMax),
+      copyWithTransientFailure: (state, failure) =>
+          state.copyWith(transientFailure: () => failure),
     );
 
-    result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: MyPostListStatus.loaded,
-          transientFailure: () => failure,
-        ),
-      ),
-      (newPosts) => emit(
-        state.copyWith(
-          status: MyPostListStatus.loaded,
-          posts: state.posts + newPosts,
-          hasReachedMax: newPosts.length < _pageSize,
-        ),
-      ),
-    );
+    emit(newState.copyWith(status: PostListStatus.loaded));
   }
+
+  // Future<void> _onMyPostListNextPageFetched(
+  //   MyPostListNextPageFetched event,
+  //   Emitter<MyPostListState> emit,
+  // ) async {
+  //   if (_isBusy || state.hasReachedMax) return;
+  //   _userId = event.userId;
+
+  //   emit(state.copyWith(status: MyPostListStatus.fetchingNextPage));
+
+  //   await Future.delayed(const Duration(seconds: 1));
+
+  //   final result = await _getMyPostUsecase(
+  //     GetMyPostParams(
+  //       userId: event.userId,
+  //       offset: state.posts.length,
+  //       limit: _pageSize,
+  //     ),
+  //   );
+
+  //   result.fold(
+  //     (failure) => emit(
+  //       state.copyWith(
+  //         status: MyPostListStatus.loaded,
+  //         transientFailure: () => failure,
+  //       ),
+  //     ),
+  //     (newPosts) => emit(
+  //       state.copyWith(
+  //         status: MyPostListStatus.loaded,
+  //         posts: state.posts + newPosts,
+  //         hasReachedMax: newPosts.length < _pageSize,
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Future<void> _onMyPostListRefreshed(
     MyPostListRefreshed event,
@@ -159,55 +199,73 @@ class MyPostListBloc extends Bloc<MyPostListEvent, MyPostListState> {
   ) async {
     if (_isBusy) return;
 
-    final originalList = state.posts;
-    final originalPost = event.post;
-    final originalIndex = originalList.indexWhere(
-      (p) => p.postId == originalPost.postId,
-    );
-    if (originalIndex == -1) return;
-
-    final optimisticPost = originalPost.copyWith(
-      currentUserLiked: !originalPost.currentUserLiked,
-      likesCount: originalPost.currentUserLiked
-          ? originalPost.likesCount - 1
-          : originalPost.likesCount + 1,
-    );
-    final optimisticList = List<PostDisplay>.from(originalList);
-    optimisticList[originalIndex] = optimisticPost;
-
-    emit(state.copyWith(posts: optimisticList, transientFailure: () => null));
-
-    final result = await _toggleLikeUsecase(originalPost.postId);
-
-    result.fold(
-      (failure) {
-        emit(
-          state.copyWith(posts: originalList, transientFailure: () => failure),
-        );
-      },
-      (likeResult) {
-        final authoritativePost = originalPost.copyWith(
-          currentUserLiked: likeResult.liked,
-          likesCount: likeResult.likesCount,
-        );
-
-        final finalList = List<PostDisplay>.from(state.posts);
-        final finalIndex = finalList.indexWhere(
-          (p) => p.postId == authoritativePost.postId,
-        );
-
-        if (finalIndex != -1) {
-          finalList[finalIndex] = authoritativePost;
-
-          _globalEventBus.add(PostUpdateDispatched(post: authoritativePost));
-
-          emit(state.copyWith(posts: finalList));
-        } else {
-          emit(state);
-        }
-      },
+    await _toggleLikeHandler.execute(
+      emit: emit,
+      initialState: state,
+      postToToggle: event.post,
+      getLastestState: () => state,
+      getPosts: (state) => state.posts,
+      copyWithPosts: (state, newPosts) => state.copyWith(posts: newPosts),
+      copyWithTransientFailure: (state, failure) => state.copyWith(transientFailure: () => failure,),
+      successStateBuilder: (state) => state.copyWith(status: MyPostListStatus.loaded),
     );
   }
+
+  // Future<void> _onMyPostLikeToggled(
+  //   MyPostLikeToggled event,
+  //   Emitter<MyPostListState> emit,
+  // ) async {
+  //   if (_isBusy) return;
+
+  //   final originalList = state.posts;
+  //   final originalPost = event.post;
+  //   final originalIndex = originalList.indexWhere(
+  //     (p) => p.postId == originalPost.postId,
+  //   );
+  //   if (originalIndex == -1) return;
+
+  //   final optimisticPost = originalPost.copyWith(
+  //     currentUserLiked: !originalPost.currentUserLiked,
+  //     likesCount: originalPost.currentUserLiked
+  //         ? originalPost.likesCount - 1
+  //         : originalPost.likesCount + 1,
+  //   );
+  //   final optimisticList = List<PostDisplay>.from(originalList);
+  //   optimisticList[originalIndex] = optimisticPost;
+
+  //   emit(state.copyWith(posts: optimisticList, transientFailure: () => null));
+
+  //   final result = await _toggleLikeUsecase(originalPost.postId);
+
+  //   result.fold(
+  //     (failure) {
+  //       emit(
+  //         state.copyWith(posts: originalList, transientFailure: () => failure),
+  //       );
+  //     },
+  //     (likeResult) {
+  //       final authoritativePost = originalPost.copyWith(
+  //         currentUserLiked: likeResult.liked,
+  //         likesCount: likeResult.likesCount,
+  //       );
+
+  //       final finalList = List<PostDisplay>.from(state.posts);
+  //       final finalIndex = finalList.indexWhere(
+  //         (p) => p.postId == authoritativePost.postId,
+  //       );
+
+  //       if (finalIndex != -1) {
+  //         finalList[finalIndex] = authoritativePost;
+
+  //         _globalEventBus.add(PostUpdateDispatched(post: authoritativePost));
+
+  //         emit(state.copyWith(posts: finalList));
+  //       } else {
+  //         emit(state);
+  //       }
+  //     },
+  //   );
+  // }
 
   Future<void> _onMyPostListRefillRequested(
     _MyPostListRefillRequested event,
@@ -217,38 +275,65 @@ class MyPostListBloc extends Bloc<MyPostListEvent, MyPostListState> {
 
     emit(state.copyWith(status: MyPostListStatus.refilling));
 
-    final result = await _getMyPostUsecase(
-      GetMyPostParams(userId: _userId!, offset: state.posts.length, limit: 1),
-    );
-
-    result.fold(
-      (failure) {
-        emit(
-          state.copyWith(
-            status: MyPostListStatus.loaded,
-            transientFailure: () => failure,
-          ),
+    final newState = await _paginationHandler.fetchOneToRefill(
+      currentState: state,
+      fetchPostsStrategy: ({required int offset, required int limit}) {
+        return _getMyPostUsecase(
+          GetMyPostParams(userId: _userId!, offset: offset, limit: limit),
         );
       },
-      (newPosts) {
-        if (newPosts.isNotEmpty) {
-          emit(
-            state.copyWith(
-              status: MyPostListStatus.loaded,
-              posts: [...state.posts, ...newPosts],
-            ),
-          );
-        } else {
-          emit(
-            state.copyWith(
-              status: MyPostListStatus.loaded,
-              hasReachedMax: true,
-            ),
-          );
-        }
-      },
+      getLastestState: () => state,
+      getPosts: (state) => state.posts,
+      copyWithPosts: (state, newPosts) => state.copyWith(posts: newPosts),
+      copyWithHasReachedMax: (state, hasReachedMax) =>
+          state.copyWith(hasReachedMax: hasReachedMax),
+      copyWithTransientFailure: (state, failure) =>
+          state.copyWith(transientFailure: () => failure),
     );
+
+    emit(newState.copyWith(status: PostListStatus.loaded));
   }
+
+  // Future<void> _onMyPostListRefillRequested(
+  //   _MyPostListRefillRequested event,
+  //   Emitter<MyPostListState> emit,
+  // ) async {
+  //   if (_isBusy || state.hasReachedMax || _userId == null) return;
+
+  //   emit(state.copyWith(status: MyPostListStatus.refilling));
+
+  //   final result = await _getMyPostUsecase(
+  //     GetMyPostParams(userId: _userId!, offset: state.posts.length, limit: 1),
+  //   );
+
+  //   result.fold(
+  //     (failure) {
+  //       emit(
+  //         state.copyWith(
+  //           status: MyPostListStatus.loaded,
+  //           transientFailure: () => failure,
+  //         ),
+  //       );
+  //     },
+  //     (newPosts) {
+  //       if (newPosts.isNotEmpty) {
+  //         emit(
+  //           state.copyWith(
+  //             status: MyPostListStatus.loaded,
+  //             posts: [...state.posts, ...newPosts],
+  //           ),
+  //         );
+  //       } else {
+  //         emit(
+  //           state.copyWith(
+  //             status: MyPostListStatus.loaded,
+  //             hasReachedMax: true,
+  //           ),
+  //         );
+  //       }
+  //     },
+  //   );
+  // }
 
   void _onGlobalEventReceived(
     _GlobalEventReceived event,

@@ -12,6 +12,7 @@ import 'package:equatable/equatable.dart';
 
 import '../../../../../core/bus/global_event.dart';
 import '../../../../../core/bus/global_event_bus.dart';
+import '../../../../post/presentation/handlers/toggle_like_handler.dart';
 
 part 'search_event.dart';
 part 'search_state.dart';
@@ -41,6 +42,11 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     _globalEventSubscription = _globalEventBus.stream.listen((event) {
       add(_GlobalEventReceived(event: event));
     });
+
+    _toggleLikeHandler = ToggleLikeHandler(
+      toggleLikeUseCase: _toggleLikeUsecase,
+      globalEventBus: _globalEventBus,
+    );
   }
 
   final SearchUsersUsecase _searchUsersUsecase;
@@ -49,6 +55,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   final GlobalEventBus _globalEventBus;
 
   StreamSubscription<GlobalEvent>? _globalEventSubscription;
+
+  late final ToggleLikeHandler _toggleLikeHandler;
 
   bool get _isBusy =>
       state.status == SearchStatus.loadingPosts ||
@@ -115,53 +123,71 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     Emitter<SearchState> emit,
   ) async {
     if (_isBusy) return;
-    final originalList = state.posts;
-    final originalPost = event.post;
-    final originalIndex = originalList.indexWhere(
-      (p) => p.postId == originalPost.postId,
-    );
-    if (originalIndex == -1) return;
 
-    final optimisticPost = originalPost.copyWith(
-      currentUserLiked: !originalPost.currentUserLiked,
-      likesCount: originalPost.currentUserLiked
-          ? originalPost.likesCount - 1
-          : originalPost.likesCount + 1,
-    );
-    final optimisticList = List<PostDisplay>.from(originalList);
-    optimisticList[originalIndex] = optimisticPost;
-
-    emit(state.copyWith(posts: optimisticList, transientFailure: () => null));
-
-    final result = await _toggleLikeUsecase(originalPost.postId);
-
-    result.fold(
-      (failure) {
-        emit(
-          state.copyWith(posts: originalList, transientFailure: () => failure),
-        );
-      },
-      (likeResult) {
-        final authoritativePost = originalPost.copyWith(
-          currentUserLiked: likeResult.liked,
-          likesCount: likeResult.likesCount,
-        );
-        final finalList = List<PostDisplay>.from(state.posts);
-        final finalIndex = finalList.indexWhere(
-          (p) => p.postId == authoritativePost.postId,
-        );
-        if (finalIndex != 1) {
-          finalList[finalIndex] = authoritativePost;
-
-          _globalEventBus.add(PostUpdateDispatched(post: authoritativePost));
-
-          emit(state.copyWith(posts: finalList));
-        } else {
-          emit(state);
-        }
-      },
+    await _toggleLikeHandler.execute(
+      emit: emit,
+      initialState: state,
+      postToToggle: event.post,
+      getLastestState: () => state,
+      getPosts: (state) => state.posts,
+      copyWithPosts: (state, newPosts) => state.copyWith(posts: newPosts),
+      copyWithTransientFailure: (state, failure) => state.copyWith(transientFailure: () => failure,),
+      successStateBuilder: (state) => state.copyWith(status: SearchStatus.loaded),
     );
   }
+
+  // Future<void> _onSearchPostLikeToggled(
+  //   SearchPostLikeToggled event,
+  //   Emitter<SearchState> emit,
+  // ) async {
+  //   if (_isBusy) return;
+  //   final originalList = state.posts;
+  //   final originalPost = event.post;
+  //   final originalIndex = originalList.indexWhere(
+  //     (p) => p.postId == originalPost.postId,
+  //   );
+  //   if (originalIndex == -1) return;
+
+  //   final optimisticPost = originalPost.copyWith(
+  //     currentUserLiked: !originalPost.currentUserLiked,
+  //     likesCount: originalPost.currentUserLiked
+  //         ? originalPost.likesCount - 1
+  //         : originalPost.likesCount + 1,
+  //   );
+  //   final optimisticList = List<PostDisplay>.from(originalList);
+  //   optimisticList[originalIndex] = optimisticPost;
+
+  //   emit(state.copyWith(posts: optimisticList, transientFailure: () => null));
+
+  //   final result = await _toggleLikeUsecase(originalPost.postId);
+
+  //   result.fold(
+  //     (failure) {
+  //       emit(
+  //         state.copyWith(posts: originalList, transientFailure: () => failure),
+  //       );
+  //     },
+  //     (likeResult) {
+  //       final authoritativePost = originalPost.copyWith(
+  //         currentUserLiked: likeResult.liked,
+  //         likesCount: likeResult.likesCount,
+  //       );
+  //       final finalList = List<PostDisplay>.from(state.posts);
+  //       final finalIndex = finalList.indexWhere(
+  //         (p) => p.postId == authoritativePost.postId,
+  //       );
+  //       if (finalIndex != 1) {
+  //         finalList[finalIndex] = authoritativePost;
+
+  //         _globalEventBus.add(PostUpdateDispatched(post: authoritativePost));
+
+  //         emit(state.copyWith(posts: finalList));
+  //       } else {
+  //         emit(state);
+  //       }
+  //     },
+  //   );
+  // }
 
   void _onSearchTransientFailureConsumed(
     SearchTransientFailureConsumed event,
@@ -213,7 +239,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
         emit(state.copyWith(posts: newPosts, users: newUsers));
 
-      case _: 
+      case _:
     }
   }
 
