@@ -33,4 +33,19 @@ final class _GlobalEventReceived extends PostListEvent {
   List<Object> get props => [event];
 }
 
-final class _PostListRefillRequested extends PostListEvent{}
+final class _PostListRefillRequested extends PostListEvent {}
+
+final class PostListNewPostPrepended extends PostListEvent {
+  const PostListNewPostPrepended({required this.post});
+
+  final PostDisplay post;
+
+  @override
+  List<Object> get props => [post];
+}
+
+final class PostListScrollToTop extends PostListEvent{}
+
+final class PostListEventScrollConsumed extends PostListEvent{}
+
+final class PostListResetRequested extends PostListEvent{}

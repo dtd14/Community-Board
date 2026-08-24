@@ -44,6 +44,7 @@ import '../../features/profile/presentation/blocs/user_profile/user_profile_bloc
     as _i634;
 import '../../features/search/presentation/blocs/search/search_bloc.dart'
     as _i608;
+import '../blocs/realtime/realtime_bloc.dart' as _i743;
 import '../bus/global_event_bus.dart' as _i91;
 import 'register_module.dart' as _i291;
 
@@ -63,6 +64,10 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i561.AuthRemoteDataSource>(
       () => registerModule.authRemoteDataSource,
     );
+    gh.lazySingleton<_i816.RealtimeRemoteDataSource>(
+      () => registerModule.realtimeRemoteDataSource,
+      dispose: _i291.disposeRealtimeDataSource,
+    );
     gh.lazySingleton<_i816.PostRemoteDataSource>(
       () => registerModule.postRemoteDataSource,
     );
@@ -77,8 +82,16 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i378.SignupUsecase>(() => registerModule.signupUsecase);
     gh.factory<_i378.LoginUsecase>(() => registerModule.loginUsecase);
     gh.factory<_i378.LogoutUsecase>(() => registerModule.logoutUsecase);
+    gh.lazySingleton<_i456.RealtimeRepository>(
+      () => registerModule.realtimeRepository,
+    );
     gh.factory<_i173.SignupBloc>(
       () => _i173.SignupBloc(signupUsecase: gh<_i378.SignupUsecase>()),
+    );
+    gh.factory<_i743.RealtimeBloc>(
+      () => _i743.RealtimeBloc(
+        realtimeRepository: gh<_i456.RealtimeRepository>(),
+      ),
     );
     gh.lazySingleton<_i93.SearchRepository>(
       () => registerModule.searchRepository,
@@ -217,6 +230,12 @@ class _$RegisterModule extends _i291.RegisterModule {
       );
 
   @override
+  _i816.SupabaseRealtimeRemoteDataSource get realtimeRemoteDataSource =>
+      _i816.SupabaseRealtimeRemoteDataSource(
+        supabaseClient: _getIt<_i454.SupabaseClient>(),
+      );
+
+  @override
   _i816.SupabasePostRemoteDataSource get postRemoteDataSource =>
       _i816.SupabasePostRemoteDataSource(
         supabaseClient: _getIt<_i454.SupabaseClient>(),
@@ -255,6 +274,13 @@ class _$RegisterModule extends _i291.RegisterModule {
   @override
   _i378.LogoutUsecase get logoutUsecase =>
       _i378.LogoutUsecase(authRepository: _getIt<_i378.AuthRepository>());
+
+  @override
+  _i816.RealtimeRepositoryImpl get realtimeRepository =>
+      _i816.RealtimeRepositoryImpl(
+        realtimeRemoteDataSource: _getIt<_i816.RealtimeRemoteDataSource>(),
+        postRemoteDataSource: _getIt<_i816.PostRemoteDataSource>(),
+      );
 
   @override
   _i66.SearchRepositoryImpl get searchRepository => _i66.SearchRepositoryImpl(

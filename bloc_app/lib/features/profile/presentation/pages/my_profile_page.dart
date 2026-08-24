@@ -67,7 +67,12 @@ class MyProfileView extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Center(
-            child: Text('My profile', textAlign: TextAlign.center),
+            child: Row(
+              children: [
+                SizedBox(width: 130,),
+                Text('My Profile', textAlign: TextAlign.center),
+              ],
+            ),
           ),
           actions: [
             IconButton(

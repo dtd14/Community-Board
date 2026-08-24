@@ -30,6 +30,10 @@ class PostListBloc extends Bloc<PostListEvent, PostListState> {
     on<_GlobalEventReceived>(_onGlobalEventReceived);
     on<PostLikeToggled>(_onPostLikeToggled);
     on<_PostListRefillRequested>(_onPostListRefillRequested);
+    on<PostListNewPostPrepended>(_onPostListNewPostPrepended);
+    on<PostListScrollToTop>(_onPostListScrollToTop);
+    on<PostListEventScrollConsumed>(_onPostListEventScrollConsumed);
+    on<PostListResetRequested>((event, emit) => emit(const PostListState()),);
 
     _globalEventBusSubscription = _globalEventBus.stream.listen((event) {
       add(_GlobalEventReceived(event: event));
@@ -240,8 +244,10 @@ class PostListBloc extends Bloc<PostListEvent, PostListState> {
       getLastestState: () => state,
       getPosts: (state) => state.posts,
       copyWithPosts: (state, newPosts) => state.copyWith(posts: newPosts),
-      copyWithTransientFailure: (state, failure) => state.copyWith(transientFailure: () => failure,),
-      successStateBuilder: (state) => state.copyWith(status: PostListStatus.loaded),
+      copyWithTransientFailure: (state, failure) =>
+          state.copyWith(transientFailure: () => failure),
+      successStateBuilder: (state) =>
+          state.copyWith(status: PostListStatus.loaded),
     );
   }
 
@@ -362,4 +368,32 @@ class PostListBloc extends Bloc<PostListEvent, PostListState> {
   //     },
   //   );
   // }
+
+  void _onPostListNewPostPrepended(
+    PostListNewPostPrepended event,
+    Emitter<PostListState> emit,
+  ) {
+    if (state.posts.any((p) => p.postId == event.post.postId)) return;
+
+    final updatedPosts = [event.post, ...state.posts];
+    emit(state.copyWith(posts: updatedPosts));
+  }
+
+  void _onPostListScrollToTop(
+    PostListScrollToTop event,
+    Emitter<PostListState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        scrollToTopEventId: () => DateTime.now().microsecondsSinceEpoch,
+      ),
+    );
+  }
+
+  void _onPostListEventScrollConsumed(
+    PostListEventScrollConsumed event,
+    Emitter<PostListState> emit,
+  ) {
+    emit(state.copyWith(scrollToTopEventId: () => null));
+  }
 }

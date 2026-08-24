@@ -4,8 +4,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/blocs/realtime/realtime_bloc.dart';
 import 'core/di/di.dart';
 import 'features/auth/presentation/bloc/authentication/authentication_bloc.dart';
+import 'features/post/presentation/bloc/post_list/post_list_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,12 +31,39 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider.value(value: getIt<AuthenticationBloc>()),
+        BlocProvider(
+          create: (context) => getIt<PostListBloc>()..add(PostListFetched()),
+        ),
+        BlocProvider(
+          create: (context) =>
+              getIt<RealtimeBloc>()..add(const RealtimeSubscribed()),
+        ),
       ],
-      child: MaterialApp.router(
-        title: 'Community Board Bloc',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-        routerConfig: getIt<GoRouter>(),
+      child: BlocListener<AuthenticationBloc, AuthenticationState>(
+        listenWhen: (previous, current) => previous.status != current.status,
+        listener: (context, state) {
+          if (state.status == AuthenticationStatus.authenticated) {
+            final postListBloc = context.read<PostListBloc>();
+            if (postListBloc.state.posts.isEmpty ||
+                postListBloc.state.status == PostListStatus.failure) {
+              postListBloc.add(PostListFetched());
+            }
+
+            context.read<RealtimeBloc>().add(const RealtimeSubscribed());
+          }
+          if (state.status == AuthenticationStatus.unauthenticated) {
+            context.read<PostListBloc>().add(PostListResetRequested());
+            context.read<RealtimeBloc>().add(const RealtimeUnSubscribed());
+          }
+        },
+        child: MaterialApp.router(
+          title: 'Community Board Bloc',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+          ),
+          routerConfig: getIt<GoRouter>(),
+        ),
       ),
     );
   }
