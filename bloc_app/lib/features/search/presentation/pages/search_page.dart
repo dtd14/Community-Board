@@ -88,18 +88,31 @@ class _SearchViewState extends State<SearchView>
             state.status == SearchStatus.loadingUsers;
         return Scaffold(
           appBar: AppBar(
-            title: TextField(
-              controller: _searchController,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Search for users or posts...',
-                border: InputBorder.none,
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        onPressed: _searchController.clear,
-                        icon: const Icon(Icons.clear, size: 20),
-                      )
-                    : null,
+            title: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E5E9), // Màu xám nhạt
+                borderRadius: BorderRadius.circular(12), // Bo góc
+                border: Border.all(
+                  color: const Color(0xFFD3D6DC), // Màu viền xám nhạt hơn
+                  width: 1,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+              ), // Khoảng cách bên trong
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  icon: const Icon(Icons.search, size: 20),
+                  hintText: 'Search for users or posts...',
+                  border: InputBorder.none, // Loại bỏ viền mặc định
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          onPressed: _searchController.clear,
+                          icon: const Icon(Icons.clear, size: 20),
+                        )
+                      : null,
+                ),
               ),
             ),
             bottom: PreferredSize(
@@ -212,7 +225,7 @@ class _SearchViewState extends State<SearchView>
           onToggleLike: () {
             context.read<SearchBloc>().add(SearchPostLikeToggled(post: post));
           },
-        );  
+        );
       },
     );
   }

@@ -12,7 +12,7 @@ abstract interface class AuthRepository {
     required String username,
   });
 
-    Future<Either<Failures, void>> login({
+  Future<Either<Failures, void>> login({
     required String email,
     required String password,
   });

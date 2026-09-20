@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:string_validator/string_validator.dart' as validator;
+import 'package:core/utils.dart';
 import '../../../../core/config/router/route_constants.dart';
 import '../../../../core/di/di.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/auth_validators.dart';
 import '../bloc/login/login_bloc.dart';
-import 'package:core/utils.dart';
+import '../widgets/auth_card.dart';
+import '../widgets/auth_header.dart';
+import '../widgets/auth_layout.dart';
+import '../widgets/auth_submit_button.dart';
+import '../widgets/auth_switch_prompt.dart';
+import '../widgets/auth_text_field.dart';
+import '../widgets/password_field.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -28,10 +36,9 @@ class LoginView extends StatefulWidget {
 
 class _LoginViewState extends State<LoginView> {
   final _formKey = GlobalKey<FormState>();
-  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
-
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   @override
   void dispose() {
@@ -41,11 +48,8 @@ class _LoginViewState extends State<LoginView> {
   }
 
   void _submit() {
-    setState(() {
-      _autovalidateMode = AutovalidateMode.always;
-    });
-    final form = _formKey.currentState;
-    if (form == null || !form.validate()) return;
+    setState(() => _autovalidateMode = AutovalidateMode.always);
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     context.read<LoginBloc>().add(
       LoginRequested(
@@ -57,105 +61,74 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        appBar: AppBar(title:const Center(child: Text('Login'))),
-        body: BlocConsumer<LoginBloc, LoginState>(
-          listener: (context, state) {
-            if (state is LoginLoadFailure) {
-              showErrorSnackbar(context, message: state.failure.message);
-            }
-          },
-          builder: (context, state) {
-            final isLoading = state is LoginLoadInProgress;
-            return Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: Form(
-                    key: _formKey,
-                    autovalidateMode: _autovalidateMode,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'Community Board',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        const SizedBox(height: 32),
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: const InputDecoration(labelText: 'Email'),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter your email.';
-                            }
-                            if (!validator.isEmail(value.trim())) {
-                              return 'Please enter a valid email.';
-                            }
-                            return null;
-                          },
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          enabled: !isLoading,
-                        ),
-                        const SizedBox(height: 16),
+    return BlocConsumer<LoginBloc, LoginState>(
+      listener: (context, state) {
+        if (state is LoginLoadFailure) {
+          showErrorSnackbar(context, message: state.failure.message);
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is LoginLoadInProgress;
 
-                        TextFormField(
-                          controller: _passwordController,
-                          decoration: const InputDecoration(
-                            labelText: 'Password',
-                            hintText: 'Enter your passsword...',
-                          ),
-                          obscureText: true,
-                          validator: (value) {
-                            if (value == null ||
-                                value.trim().isEmpty ||
-                                value.trim().length < 6 ||
-                                value.trim().length > 20) {
-                              return 'Please enter a password from 6 to 20 characters.';
-                            }
-                            return null;
-                          },
-                          textInputAction: TextInputAction.done,
-                          onFieldSubmitted: isLoading ? null : (_) => _submit(),
-                          enabled: !isLoading,
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: isLoading ? null : _submit,
-                          child: isLoading
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text('Login'),
-                        ),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: isLoading
-                              ? null
-                              : () {
-                                  context.goNamed(RouteNames.signup);
-                                },
-                          child: const Text('Not a memmber? Signup!'),
-                        ),
-                      ],
-                    ),
+        return AuthLayout(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const AuthHeader(
+                title: 'Welcome back',
+                subtitle: 'Sign in to connect with your community',
+              ),
+              const SizedBox(height: 24),
+              AuthCard(
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: _autovalidateMode,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AuthTextField(
+                        controller: _emailController,
+                        label: 'Email',
+                        hint: 'name@example.com',
+                        prefixIcon: Icons.mail_outline,
+                        validator: AuthValidators.email,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        enabled: !isLoading,
+                      ),
+                      const SizedBox(height: 16),
+                      PasswordField(
+                        controller: _passwordController,
+                        validator: AuthValidators.password,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: isLoading ? null : (_) => _submit(),
+                        enabled: !isLoading,
+                      ),
+                      const SizedBox(height: 24),
+                      AuthSubmitButton(
+                        label: 'Sign in',
+                        isLoading: isLoading,
+                        onPressed: _submit,
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(height: 1, color: AppColors.divider),
+                      const SizedBox(height: 8),
+                      AuthSwitchPrompt(
+                        message: "Don't have an account?",
+                        actionLabel: 'Sign up',
+                        onPressed: isLoading
+                            ? null
+                            : () => context.goNamed(RouteNames.signup),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            );
-          },
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

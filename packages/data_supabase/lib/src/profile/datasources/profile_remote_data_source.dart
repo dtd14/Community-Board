@@ -5,7 +5,10 @@ import '../../../auth.dart';
 abstract interface class ProfileRemoteDataSource {
   Future<UserModel> getProfile(String userId);
 
-  Future<UserModel> updateProfile({required String username, String? avatarUrl});
+  Future<UserModel> updateProfile({
+    required String username,
+    String? avatarUrl,
+  });
 
   Future<String> uploadAvatar({required File image, required String userId});
 

@@ -70,7 +70,7 @@ class MyProfileView extends StatelessWidget {
             child: Row(
               children: [
                 SizedBox(width: 130,),
-                Text('My Profile', textAlign: TextAlign.center),
+                Text('My Profile', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w500,)),
               ],
             ),
           ),
@@ -200,7 +200,7 @@ class _ProfileContent extends StatelessWidget {
                 const SizedBox(height: 24),
                 Text(
                   profile.username,
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: Theme.of(context).textTheme.headlineMedium, 
                 ),
                 const SizedBox(height: 8),
                 Text(

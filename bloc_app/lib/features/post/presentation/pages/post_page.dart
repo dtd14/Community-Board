@@ -24,6 +24,9 @@ class PostsView extends StatefulWidget {
 class _PostsViewState extends State<PostsView> {
   final ScrollController _scrollController = ScrollController();
 
+  static const _pageBg = Color(0xFFE2E5E9);
+  static const _ink = Color(0xFF111111);
+
   @override
   void initState() {
     super.initState();
@@ -44,10 +47,56 @@ class _PostsViewState extends State<PostsView> {
     super.dispose();
   }
 
+  Widget _buildHeaderTitle() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.asset(
+            'assets/images/logo.png',
+            width: 28,
+            height: 28,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => Container(
+              width: 28,
+              height: 28,
+              color: _ink,
+              child: const Icon(
+                Icons.forum_outlined,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Text(
+          'Community Board',
+          style: TextStyle(
+            color: _ink,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Center(child: Text('Post'))),
+      // [UI - SỬA] Thêm màu nền cho trang
+      backgroundColor: _pageBg,
+
+      appBar: AppBar(
+        backgroundColor: _pageBg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        title: _buildHeaderTitle(),
+      ),
       body: BlocConsumer<PostListBloc, PostListState>(
         listenWhen: (previous, current) {
           final isTransientFailure =
