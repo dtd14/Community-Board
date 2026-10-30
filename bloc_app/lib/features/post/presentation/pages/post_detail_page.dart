@@ -9,6 +9,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/config/router/route_constants.dart';
 import '../../../../core/di/di.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../widgets/post_badges.dart';
+import '../widgets/post_people_sheet.dart';
 import '../../../auth/presentation/bloc/authentication/authentication_bloc.dart';
 import '../bloc/comments_list/comments_list_bloc.dart';
 import '../bloc/post_detail/post_detail_bloc.dart';
@@ -113,16 +116,14 @@ class _PostDetailViewState extends State<PostDetailView> {
               return PopScope(
                 canPop: !isSubmitting,
                 child: AlertDialog(
-                  title: const Text('Confirm Deletion'),
-                  content: const Text(
-                    'Are you sure you want to delete this post?',
-                  ),
+                  title: const Text('Xóa bài viết'),
+                  content: const Text('Bạn có chắc muốn xóa bài viết này?'),
                   actions: [
                     TextButton(
                       onPressed: isSubmitting
                           ? null
                           : () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
+                      child: const Text('Hủy'),
                     ),
                     TextButton(
                       onPressed: isSubmitting
@@ -137,7 +138,7 @@ class _PostDetailViewState extends State<PostDetailView> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Delete'),
+                          : const Text('Xóa'),
                     ),
                   ],
                 ),
@@ -185,7 +186,7 @@ class _PostDetailViewState extends State<PostDetailView> {
                 (currentUserRole == Roles.admin);
             return Scaffold(
               appBar: AppBar(
-                title: Text(post.title, style: const TextStyle(fontSize: 18)),
+                title: const Text('Chi tiết bài viết'),
                 actions: [
                   if (canModify)
                     IconButton(
@@ -196,7 +197,7 @@ class _PostDetailViewState extends State<PostDetailView> {
                         );
                       },
                       icon: const Icon(Icons.edit_outlined),
-                      tooltip: 'Edit Post',
+                      tooltip: 'Chỉnh sửa',
                     ),
                   if (canModify)
                     IconButton(
@@ -204,18 +205,23 @@ class _PostDetailViewState extends State<PostDetailView> {
                         _showDeleteConfirmDialog(context);
                       },
                       icon: const Icon(Icons.delete_outline),
-                      tooltip: 'Delete Post',
+                      tooltip: 'Xóa bài viết',
                     ),
                 ],
               ),
-              body: Column(
-                children: [
-                  Expanded(child: _buildContext(context, post)),
-                  CommentInputField(
-                    postId: widget.postId,
-                    scrollController: _scrollController,
+              body: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 880),
+                  child: Column(
+                    children: [
+                      Expanded(child: _buildContext(context, post)),
+                      CommentInputField(
+                        postId: widget.postId,
+                        scrollController: _scrollController,
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             );
         }
@@ -270,6 +276,88 @@ class _PostDetailViewState extends State<PostDetailView> {
     );
   }
 
+  Widget _buildAcknowledgement(BuildContext context, PostDisplay post) {
+    final user = context.read<AuthenticationBloc>().state.user;
+    final state = context.watch<PostDetailBloc>().state;
+    final isAuthor = user?.id == post.authorId;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                post.currentUserAcknowledged
+                    ? Icons.task_alt
+                    : Icons.fact_check_outlined,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  post.currentUserAcknowledged
+                      ? 'Bạn đã xác nhận đã đọc'
+                      : 'Thông tin cần xác nhận',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            isAuthor
+                ? 'Theo dõi việc tiếp nhận thông tin của các thành viên.'
+                : 'Sau khi đọc nội dung, hãy xác nhận để người phụ trách biết bạn đã tiếp nhận.',
+            style: const TextStyle(height: 1.5),
+          ),
+          const SizedBox(height: 14),
+          if (!isAuthor && user != null)
+            FilledButton.icon(
+              onPressed:
+                  post.currentUserAcknowledged ||
+                      state.isAcknowledging ||
+                      state.isLiking
+                  ? null
+                  : () => context.read<PostDetailBloc>().add(
+                      const PostDetailAcknowledged(),
+                    ),
+              icon: state.isAcknowledging
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.done_all, size: 18),
+              label: Text(
+                post.currentUserAcknowledged ? 'Đã xác nhận' : 'Tôi đã đọc',
+              ),
+            ),
+          if (user?.role == Roles.admin)
+            TextButton.icon(
+              onPressed: () => showPostPeopleSheet(
+                context,
+                postId: post.postId,
+                kind: PostPeopleKind.acknowledged,
+              ),
+              icon: const Icon(Icons.people_outline),
+              label: Text(
+                '${post.acknowledgementsCount} người đã xác nhận · Xem danh sách',
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPostDetail(BuildContext context, PostDisplay post) {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -288,14 +376,16 @@ class _PostDetailViewState extends State<PostDetailView> {
                   if (currentUserId != post.authorId) {
                     context.pushNamed(
                       RouteNames.userDetail,
-                      pathParameters: {'UserId': post.authorId},
+                      pathParameters: {'userId': post.authorId},
                     );
                   }
                 },
                 child: CircleAvatar(
                   radius: 22,
                   backgroundColor: Colors.grey.shade300,
-                  child: post.authorAvatarUrl == null
+                  child:
+                      post.authorAvatarUrl == null ||
+                          post.authorAvatarUrl!.isEmpty
                       ? const Icon(Icons.person)
                       : ClipOval(
                           child: CachedNetworkImage(
@@ -312,19 +402,37 @@ class _PostDetailViewState extends State<PostDetailView> {
                 ),
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text((post.authorUsername)),
-                  Text(
-                    DateFormat('yyyy-MM-dd HH:mm').format(post.postCreatedAt),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      post.authorUsername,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      DateFormat(
+                        'yyyy-MM-dd HH:mm',
+                      ).format(post.postCreatedAt.toLocal()),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
+          PostBadges(post: post),
+          const SizedBox(height: 16),
+          Text(
+            post.title,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
+          ),
+          const SizedBox(height: 20),
 
           if (post.imageUrl != null && post.imageUrl!.isNotEmpty)
             ClipRRect(
@@ -347,14 +455,21 @@ class _PostDetailViewState extends State<PostDetailView> {
           ),
           const SizedBox(height: 24),
 
-          Row(
+          Wrap(
+            spacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               IconButton(
-                onPressed: () {
-                  context.read<PostDetailBloc>().add(
-                    const PostDetailLikeToggled(),
-                  );
-                },
+                tooltip: post.currentUserLiked ? 'Bỏ thích' : 'Thích bài viết',
+                onPressed:
+                    context.select(
+                      (PostDetailBloc bloc) =>
+                          bloc.state.isLiking || bloc.state.isAcknowledging,
+                    )
+                    ? null
+                    : () => context.read<PostDetailBloc>().add(
+                        const PostDetailLikeToggled(),
+                      ),
                 icon: Icon(
                   post.currentUserLiked
                       ? Icons.thumb_up
@@ -364,12 +479,27 @@ class _PostDetailViewState extends State<PostDetailView> {
                     ? Theme.of(context).primaryColor
                     : null,
               ),
-              Text(post.likesCount.toString()),
+              TextButton(
+                onPressed: () =>
+                    showPostPeopleSheet(context, postId: post.postId),
+                child: Text('${post.likesCount} lượt thích'),
+              ),
               const SizedBox(width: 16),
               const Icon(Icons.mode_comment_outlined, size: 24),
               const SizedBox(width: 12),
               Text(post.commentsCount.toString()),
             ],
+          ),
+          if (post.requiresAcknowledgement) ...[
+            const SizedBox(height: 20),
+            _buildAcknowledgement(context, post),
+          ],
+          const SizedBox(height: 16),
+          Text(
+            'Trao đổi & phản hồi',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),

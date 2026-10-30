@@ -1,5 +1,6 @@
 // widgets/auth_submit_button.dart
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 
 class AuthSubmitButton extends StatelessWidget {
   const AuthSubmitButton({
@@ -18,14 +19,12 @@ class AuthSubmitButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         disabledBackgroundColor: Colors.black54,
         minimumSize: const Size.fromHeight(52),
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: isLoading
           ? const SizedBox(

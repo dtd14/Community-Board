@@ -7,7 +7,7 @@ class PasswordField extends StatefulWidget {
   const PasswordField({
     super.key,
     required this.controller,
-    this.label = 'Password',
+    this.label = 'Mật khẩu',
     this.hint = 'At least 6 characters',
     this.validator,
     this.textInputAction,

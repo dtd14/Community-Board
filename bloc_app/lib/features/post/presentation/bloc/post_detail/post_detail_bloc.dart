@@ -20,6 +20,7 @@ class PostDetailBloc extends Bloc<PostDetailEvent, PostDetailState> {
     required this._globalEventBus,
     required this._deletePostUsecase,
     required this._deletePostFolderUsecase,
+    required this.acknowledgePostUsecase,
   }) : super(const PostDetailState()) {
     on<PostDetailFetched>(_onPostDetailFetched);
     on<PostDetailLikeToggled>(_onPostDetailLikeToggled);
@@ -28,6 +29,7 @@ class PostDetailBloc extends Bloc<PostDetailEvent, PostDetailState> {
       _onPostDetailTransientFailureComsumed,
     );
     on<PostDeleted>(_onPostDeleted);
+    on<PostDetailAcknowledged>(_onPostDetailAcknowledged);
 
     _globalEventBusSubscription = _globalEventBus.stream.listen((event) {
       if (event is PostUpdateDispatched) {
@@ -42,10 +44,13 @@ class PostDetailBloc extends Bloc<PostDetailEvent, PostDetailState> {
   final GlobalEventBus _globalEventBus;
   final DeletePostUsecase _deletePostUsecase;
   final DeletePostFolderUsecase _deletePostFolderUsecase;
+  final AcknowledgePostUsecase acknowledgePostUsecase;
   StreamSubscription<GlobalEvent>? _globalEventBusSubscription;
   bool get _isBusy =>
       state.status == PostDetailStatus.loading ||
-      state.status == PostDetailStatus.submitting;
+      state.status == PostDetailStatus.submitting ||
+      state.isAcknowledging ||
+      state.isLiking;
 
   Future<void> _onPostDetailFetched(
     PostDetailFetched event,
@@ -74,7 +79,12 @@ class PostDetailBloc extends Bloc<PostDetailEvent, PostDetailState> {
     PostDetailLikeToggled event,
     Emitter<PostDetailState> emit,
   ) async {
-    if (_isBusy || state.post == null) return;
+    if (_isBusy ||
+        state.post == null ||
+        state.isLiking ||
+        state.isAcknowledging) {
+      return;
+    }
 
     final originalPost = state.post!;
 
@@ -85,23 +95,65 @@ class PostDetailBloc extends Bloc<PostDetailEvent, PostDetailState> {
           : originalPost.likesCount + 1,
     );
     emit(
-      state.copyWith(post: () => optimisticPost, transientFailure: () => null),
+      state.copyWith(
+        post: () => optimisticPost,
+        transientFailure: () => null,
+        isLiking: true,
+      ),
     );
 
     final result = await _toggleLikeUsecase(originalPost.postId);
 
     result.fold(
       (failure) => emit(
-        state.copyWith(post: () => originalPost, transientFailure: () => null),
+        state.copyWith(
+          post: () => state.post!.copyWith(
+            likesCount: originalPost.likesCount,
+            currentUserLiked: originalPost.currentUserLiked,
+          ),
+          transientFailure: () => failure,
+          isLiking: false,
+        ),
       ),
       (likeResult) {
-        final authoritativePost = originalPost.copyWith(
+        final authoritativePost = state.post!.copyWith(
           currentUserLiked: likeResult.liked,
           likesCount: likeResult.likesCount,
         );
-        emit(state.copyWith(post: () => authoritativePost));
+        emit(state.copyWith(post: () => authoritativePost, isLiking: false));
 
         _globalEventBus.add(PostUpdateDispatched(post: authoritativePost));
+      },
+    );
+  }
+
+  Future<void> _onPostDetailAcknowledged(
+    PostDetailAcknowledged event,
+    Emitter<PostDetailState> emit,
+  ) async {
+    final post = state.post;
+    if (_isBusy ||
+        state.isAcknowledging ||
+        state.isLiking ||
+        post == null ||
+        !post.requiresAcknowledgement ||
+        post.currentUserAcknowledged) {
+      return;
+    }
+    emit(state.copyWith(isAcknowledging: true, transientFailure: () => null));
+    final result = await acknowledgePostUsecase(
+      AcknowledgePostParams(
+        postId: post.postId,
+        contentVersion: post.contentVersion,
+      ),
+    );
+    result.fold(
+      (failure) => emit(
+        state.copyWith(isAcknowledging: false, transientFailure: () => failure),
+      ),
+      (updatedPost) {
+        emit(state.copyWith(isAcknowledging: false, post: () => updatedPost));
+        _globalEventBus.add(PostUpdateDispatched(post: updatedPost));
       },
     );
   }
@@ -159,7 +211,8 @@ class PostDetailBloc extends Bloc<PostDetailEvent, PostDetailState> {
     _PostUpdatedFrombus event,
     Emitter<PostDetailState> emit,
   ) {
-    if (state.status == PostDetailStatus.loaded) {
+    if (state.status == PostDetailStatus.loaded &&
+        event.post.contentVersion >= (state.post?.contentVersion ?? 0)) {
       emit(state.copyWith(post: () => event.post));
     }
   }

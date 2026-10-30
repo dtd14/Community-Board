@@ -9,6 +9,7 @@
 // coverage:ignore-file
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+
 import 'package:data_supabase/auth.dart' as _i561;
 import 'package:data_supabase/post.dart' as _i816;
 import 'package:data_supabase/profile.dart' as _i661;
@@ -36,6 +37,8 @@ import '../../features/post/presentation/bloc/post_form/post_form_bloc.dart'
     as _i686;
 import '../../features/post/presentation/bloc/post_list/post_list_bloc.dart'
     as _i293;
+import '../../features/post/presentation/bloc/post_people/post_people_bloc.dart'
+    as _i514;
 import '../../features/profile/presentation/blocs/edit_profile/edit_profile_bloc.dart'
     as _i1033;
 import '../../features/profile/presentation/blocs/profile/profile_bloc.dart'
@@ -115,6 +118,12 @@ extension GetItInjectableX on _i174.GetIt {
       () => registerModule.getCommentsUsecase,
     );
     gh.factory<_i456.ToggleLikeUsecase>(() => registerModule.toggleLikeUsecase);
+    gh.factory<_i456.AcknowledgePostUsecase>(
+      () => registerModule.acknowledgePostUsecase,
+    );
+    gh.factory<_i456.GetPostPeopleUsecase>(
+      () => registerModule.getPostPeopleUsecase,
+    );
     gh.factory<_i456.CreateCommentUsecase>(
       () => registerModule.createCommentUsecase,
     );
@@ -130,6 +139,11 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.factory<_i456.UpdatePostUsecase>(() => registerModule.updatePostUsecase);
     gh.factory<_i456.GetMyPostUsecase>(() => registerModule.getMyPostUsecase);
+    gh.factory<_i514.PostPeopleBloc>(
+      () => _i514.PostPeopleBloc(
+        getPostPeopleUsecase: gh<_i456.GetPostPeopleUsecase>(),
+      ),
+    );
     gh.factory<_i293.PostListBloc>(
       () => _i293.PostListBloc(
         getPostsUsecase: gh<_i456.GetPostsUsecase>(),
@@ -139,6 +153,16 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i503.ProfileRepository>(
       () => registerModule.profileRepository,
+    );
+    gh.factory<_i557.PostDetailBloc>(
+      () => _i557.PostDetailBloc(
+        getPostDetailUsecase: gh<_i456.GetPostDetailUsecase>(),
+        toggleLikeUsecase: gh<_i456.ToggleLikeUsecase>(),
+        globalEventBus: gh<_i91.GlobalEventBus>(),
+        deletePostUsecase: gh<_i456.DeletePostUsecase>(),
+        deletePostFolderUsecase: gh<_i456.DeletePostFolderUsecase>(),
+        acknowledgePostUsecase: gh<_i456.AcknowledgePostUsecase>(),
+      ),
     );
     gh.singleton<_i583.GoRouter>(
       () => registerModule.router(gh<_i226.AuthenticationBloc>()),
@@ -160,15 +184,6 @@ extension GetItInjectableX on _i174.GetIt {
         updatePostUseCase: gh<_i456.UpdatePostUsecase>(),
         getPostDetailUseCase: gh<_i456.GetPostDetailUsecase>(),
         globalEventBus: gh<_i91.GlobalEventBus>(),
-      ),
-    );
-    gh.factory<_i557.PostDetailBloc>(
-      () => _i557.PostDetailBloc(
-        getPostDetailUsecase: gh<_i456.GetPostDetailUsecase>(),
-        toggleLikeUsecase: gh<_i456.ToggleLikeUsecase>(),
-        globalEventBus: gh<_i91.GlobalEventBus>(),
-        deletePostUsecase: gh<_i456.DeletePostUsecase>(),
-        deletePostFolderUsecase: gh<_i456.DeletePostFolderUsecase>(),
       ),
     );
     gh.factory<_i93.SearchPostUsecase>(() => registerModule.searchPostUsecase);
@@ -314,6 +329,18 @@ class _$RegisterModule extends _i291.RegisterModule {
   @override
   _i456.ToggleLikeUsecase get toggleLikeUsecase =>
       _i456.ToggleLikeUsecase(postRepository: _getIt<_i456.PostRepository>());
+
+  @override
+  _i456.AcknowledgePostUsecase get acknowledgePostUsecase =>
+      _i456.AcknowledgePostUsecase(
+        postRepository: _getIt<_i456.PostRepository>(),
+      );
+
+  @override
+  _i456.GetPostPeopleUsecase get getPostPeopleUsecase =>
+      _i456.GetPostPeopleUsecase(
+        postRepository: _getIt<_i456.PostRepository>(),
+      );
 
   @override
   _i456.CreateCommentUsecase get createCommentUsecase =>

@@ -47,28 +47,38 @@ class ToggleLikeHandler<S> {
     emit(successStateBuilder(stateWithoutFailure));
 
     final result = await _toggleLikeUseCase(postToToggle.postId);
+    if (emit.isDone) return;
 
     final latestState = getLastestState();
 
     result.fold(
       (failure) {
-        final rollbackState = copyWithPosts(latestState, originalList);
+        final rollbackList = getPosts(latestState)
+            .map(
+              (post) => post.postId == originalPost.postId
+                  ? post.copyWith(
+                      currentUserLiked: originalPost.currentUserLiked,
+                      likesCount: originalPost.likesCount,
+                    )
+                  : post,
+            )
+            .toList();
+        final rollbackState = copyWithPosts(latestState, rollbackList);
         final finalState = copyWithTransientFailure(rollbackState, failure);
         emit(successStateBuilder(finalState));
       },
       (likeResult) {
-        final authoritativePost = originalPost.copyWith(
-          currentUserLiked: likeResult.liked,
-          likesCount: likeResult.likesCount,
-        );
-
         final currentListAfterAwait = getPosts(latestState);
         final finalList = List<PostDisplay>.from(currentListAfterAwait);
         final finalIndex = finalList.indexWhere(
-          (p) => p.postId == authoritativePost.postId,
+          (p) => p.postId == originalPost.postId,
         );
 
         if (finalIndex != -1) {
+          final authoritativePost = finalList[finalIndex].copyWith(
+            currentUserLiked: likeResult.liked,
+            likesCount: likeResult.likesCount,
+          );
           finalList[finalIndex] = authoritativePost;
           _globalEventBus.add(PostUpdateDispatched(post: authoritativePost));
 

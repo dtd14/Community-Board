@@ -27,7 +27,7 @@ class AppLogo extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
+          errorBuilder: (_, _, _) => Container(
             width: size,
             height: size,
             color: Colors.grey.shade200,

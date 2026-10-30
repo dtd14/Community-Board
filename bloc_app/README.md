@@ -1,17 +1,20 @@
-# bloc_app
+# Community Board
 
-A new Flutter project.
+Ứng dụng Flutter quản lý thông tin và truyền thông nội bộ: bảng tin phân loại, ghim thông tin, tương tác, danh sách người thích và xác nhận đã đọc.
 
-## Getting Started
+## Chạy ứng dụng
 
-This project is a starting point for a Flutter application.
+Giữ các package `core`, `domain`, `data_supabase` tại `../packages` cùng ứng dụng.
 
-A few resources to get you started if this is your first Flutter project:
+1. Cấu hình `.env` với `SUPABASE_URL` và `SUPABASE_ANON_KEY` của dự án hiện có. Không dùng service_role key.
+2. Chạy [migration Supabase](docs/supabase_board_upgrade.sql), rồi [kiểm tra cấu trúc và quyền](docs/supabase_verify.sql). Migration dựa trên schema hiện có, không phải script khởi tạo dự án mới.
+3. Chạy `flutter pub get` rồi `flutter run`; dùng `flutter run -d chrome` cho web.
+4. Đăng xuất và đăng nhập lại để nạp quyền từ `profiles`.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Kiểm tra và tài liệu
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- `flutter analyze`
+- `flutter test`
+- `flutter build web --no-pub`
+- [Báo cáo thay đổi, hướng dẫn backend và các mục cần cập nhật trong đồ án](docs/board_upgrade_report.md).
+- Ảnh xem trước dùng dữ liệu minh họa: [điện thoại](docs/ui-preview/feed-390.png), [màn hình rộng](docs/ui-preview/feed-1440.png).

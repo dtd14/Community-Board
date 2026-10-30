@@ -1,32 +1,30 @@
+import 'package:core/constants.dart';
 import 'package:core/utils.dart';
+import 'package:domain/post.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
+import 'package:go_router/go_router.dart';
+import '../../../../core/config/router/route_constants.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../auth/presentation/bloc/authentication/authentication_bloc.dart';
 import '../bloc/post_list/post_list_bloc.dart';
+import '../widgets/post_badges.dart';
 import '../widgets/post_card.dart';
 
 class PostPage extends StatelessWidget {
   const PostPage({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return const PostsView();
-  }
+  Widget build(BuildContext context) => const PostsView();
 }
 
 class PostsView extends StatefulWidget {
   const PostsView({super.key});
-
   @override
   State<PostsView> createState() => _PostsViewState();
 }
 
 class _PostsViewState extends State<PostsView> {
-  final ScrollController _scrollController = ScrollController();
-
-  static const _pageBg = Color(0xFFE2E5E9);
-  static const _ink = Color(0xFF111111);
-
+  final _scrollController = ScrollController();
   @override
   void initState() {
     super.initState();
@@ -34,190 +32,299 @@ class _PostsViewState extends State<PostsView> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.extentAfter < 300) {
       context.read<PostListBloc>().add(PostListNextPageFetched());
     }
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
-  Widget _buildHeaderTitle() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.asset(
-            'assets/images/logo.png',
-            width: 28,
-            height: 28,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(
-              width: 28,
-              height: 28,
-              color: _ink,
-              child: const Icon(
-                Icons.forum_outlined,
-                color: Colors.white,
-                size: 16,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        const Text(
-          'Community Board',
-          style: TextStyle(
-            color: _ink,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
+  Future<void> _refresh() async {
+    final bloc = context.read<PostListBloc>();
+    final completed = bloc.stream.firstWhere(
+      (s) =>
+          s.status == PostListStatus.loaded ||
+          s.status == PostListStatus.failure,
     );
+    bloc.add(PostListRefreshed());
+    await completed;
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = context.select((AuthenticationBloc bloc) => bloc.state.user);
     return Scaffold(
-      // [UI - SỬA] Thêm màu nền cho trang
-      backgroundColor: _pageBg,
-
       appBar: AppBar(
-        backgroundColor: _pageBg,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        centerTitle: true,
-        title: _buildHeaderTitle(),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/logo.png',
+              width: 32,
+              height: 32,
+            ),
+            const SizedBox(width: 10),
+            const Flexible(
+              child: Text('Community Board', overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Tìm kiếm',
+            onPressed: () => context.goNamed(RouteNames.search),
+            icon: const Icon(Icons.search_rounded),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
+      floatingActionButton: user?.role == Roles.admin
+          ? FloatingActionButton.extended(
+              onPressed: () => context.pushNamed(RouteNames.postCreate),
+              icon: const Icon(Icons.edit_square),
+              label: const Text('Đăng bài'),
+            )
+          : null,
       body: BlocConsumer<PostListBloc, PostListState>(
-        listenWhen: (previous, current) {
-          final isTransientFailure =
-              previous.transientFailure == null &&
-              current.transientFailure != null;
-
-          final prevScrollEventId = previous.scrollToTopEventId;
-          final currentScrollEventId = current.scrollToTopEventId;
-          final isScrollToTopEvent =
-              prevScrollEventId != currentScrollEventId &&
-              currentScrollEventId != null;
-          return isTransientFailure || isScrollToTopEvent;
-        },
+        listenWhen: (previous, current) =>
+            previous.transientFailure != current.transientFailure ||
+            previous.scrollToTopEventId != current.scrollToTopEventId,
         listener: (context, state) {
-          if (state.scrollToTopEventId != null) {
-            _scrollController.animateTo(
-              0.0,
-              duration: const Duration(microseconds: 300),
-              curve: Curves.easeOut,
-            );
-            context.read<PostListBloc>().add(PostListEventScrollConsumed());
-          } else if (state.transientFailure != null) {
+          final bloc = context.read<PostListBloc>();
+          if (state.transientFailure != null) {
             showErrorSnackbar(
               context,
               message: state.transientFailure!.message,
             );
+            bloc.add(PostListTransientFailureConsumed());
           }
-          context.read<PostListBloc>().add(PostListTransientFailureConsumed());
-        },
-        builder: (context, state) {
-          switch (state.status) {
-            case PostListStatus.initial:
-            case PostListStatus.loading:
-              return const Center(child: CircularProgressIndicator());
-
-            case PostListStatus.failure:
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Error: ${state.failure?.message ?? 'Unknown error'}',
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: () {
-                          context.read<PostListBloc>().add(PostListFetched());
-                        },
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                ),
+          if (state.scrollToTopEventId != null) {
+            if (_scrollController.hasClients) {
+              _scrollController.animateTo(
+                0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
               );
-            case _:
-              if (state.posts.isEmpty) {
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    context.read<PostListBloc>().add(PostListRefreshed());
-                  },
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minHeight: constraints.maxHeight,
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'There are no posts yet.\nLog in with  an admin account to create your first post!',
-                              style: TextStyle(fontSize: 18),
-                              textAlign: TextAlign.center,
-                            ),
+            }
+            bloc.add(PostListEventScrollConsumed());
+          }
+        },
+        builder: (context, state) => Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 880),
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: CustomScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                    sliver: SliverToBoxAdapter(
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          gradient: const LinearGradient(
+                            colors: [AppColors.primaryDark, AppColors.primary],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
                         ),
-                      );
-                    },
-                  ),
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: () async {
-                  context.read<PostListBloc>().add(PostListRefreshed());
-                },
-                child: ListView.builder(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: state.hasReachedMax
-                      ? state.posts.length
-                      : state.posts.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index >= state.posts.length) {
-                      return (state.status == PostListStatus.fetchingNextPage)
-                          ? const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(16),
-                                child: CircularProgressIndicator(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  color: AppColors.accent,
+                                  size: 18,
+                                ),
+                                SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'KẾT NỐI NỘI BỘ',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      letterSpacing: 2,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 18),
+                            Text(
+                              'Chào ${user?.username.isNotEmpty == true ? user!.username : 'bạn'},',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
                               ),
-                            )
-                          : const SizedBox.shrink();
-                    }
-                    final post = state.posts[index];
-                    return PostCard(
-                      post: post,
-                      onToggleLike: () {
-                        context.read<PostListBloc>().add(
-                          PostLikeToggled(post: post),
-                        );
-                      },
-                    );
-                  },
-                ),
-              );
-          }
-        },
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Cùng cập nhật. Cùng kết nối.',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Thông báo, quy định và những câu chuyện trong doanh nghiệp.',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Bảng tin nội bộ',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: [
+                              ChoiceChip(
+                                label: const Text('Tất cả'),
+                                selected: state.category == null,
+                                onSelected: (_) => context
+                                    .read<PostListBloc>()
+                                    .add(const PostListCategoryChanged()),
+                              ),
+                              for (final category in PostCategories.values)
+                                ChoiceChip(
+                                  avatar: Icon(
+                                    postCategoryIcon(category),
+                                    size: 17,
+                                  ),
+                                  label: Text(postCategoryLabel(category)),
+                                  selected: state.category == category,
+                                  onSelected: (_) =>
+                                      context.read<PostListBloc>().add(
+                                        PostListCategoryChanged(
+                                          category: category,
+                                        ),
+                                      ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (state.status == PostListStatus.initial ||
+                      state.status == PostListStatus.loading)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(48),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    )
+                  else if (state.status == PostListStatus.failure)
+                    SliverToBoxAdapter(
+                      child: _emptyState(
+                        Icons.cloud_off_outlined,
+                        'Chưa thể tải bảng tin',
+                        state.failure?.message ?? 'Vui lòng thử lại.',
+                        action: FilledButton(
+                          onPressed: () => context.read<PostListBloc>().add(
+                            PostListFetched(),
+                          ),
+                          child: const Text('Thử lại'),
+                        ),
+                      ),
+                    )
+                  else if (state.posts.isEmpty)
+                    SliverToBoxAdapter(
+                      child: _emptyState(
+                        Icons.forum_outlined,
+                        'Chưa có bài viết',
+                        'Các thông tin trong mục này sẽ xuất hiện tại đây.',
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverList.builder(
+                        itemCount: state.posts.length,
+                        itemBuilder: (context, index) => PostCard(
+                          post: state.posts[index],
+                          onToggleLike: () => context.read<PostListBloc>().add(
+                            PostLikeToggled(post: state.posts[index]),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (state.status == PostListStatus.fetchingNextPage)
+                    const SliverToBoxAdapter(
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (state.status == PostListStatus.loaded &&
+                      !state.hasReachedMax &&
+                      state.posts.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Center(
+                        child: TextButton(
+                          onPressed: () => context.read<PostListBloc>().add(
+                            PostListNextPageFetched(),
+                          ),
+                          child: const Text('Xem thêm bài viết'),
+                        ),
+                      ),
+                    ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
+
+  Widget _emptyState(
+    IconData icon,
+    String title,
+    String message, {
+    Widget? action,
+  }) => Padding(
+    padding: const EdgeInsets.all(32),
+    child: Column(
+      children: [
+        Icon(icon, size: 48, color: AppColors.primary),
+        const SizedBox(height: 16),
+        Text(title, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: AppColors.mutedText),
+        ),
+        if (action != null) ...[const SizedBox(height: 16), action],
+      ],
+    ),
+  );
 }

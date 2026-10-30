@@ -18,6 +18,7 @@ class PostListState extends Equatable {
     this.failure,
     this.transientFailure,
     this.scrollToTopEventId,
+    this.category,
   });
 
   final PostListStatus status;
@@ -26,6 +27,7 @@ class PostListState extends Equatable {
   final Failures? failure;
   final Failures? transientFailure;
   final int? scrollToTopEventId;
+  final String? category;
 
   @override
   List<Object?> get props {
@@ -36,6 +38,7 @@ class PostListState extends Equatable {
       failure,
       transientFailure,
       scrollToTopEventId,
+      category,
     ];
   }
 
@@ -46,14 +49,20 @@ class PostListState extends Equatable {
     Failures? Function()? failure,
     Failures? Function()? transientFailure,
     int? Function()? scrollToTopEventId,
+    String? Function()? category,
   }) {
     return PostListState(
       status: status ?? this.status,
       posts: posts ?? this.posts,
       hasReachedMax: hasReachedMax ?? this.hasReachedMax,
       failure: failure != null ? failure() : this.failure,
-      transientFailure: transientFailure != null ? transientFailure() : this.transientFailure,
-      scrollToTopEventId: scrollToTopEventId != null ? scrollToTopEventId() : this.scrollToTopEventId,
+      transientFailure: transientFailure != null
+          ? transientFailure()
+          : this.transientFailure,
+      scrollToTopEventId: scrollToTopEventId != null
+          ? scrollToTopEventId()
+          : this.scrollToTopEventId,
+      category: category != null ? category() : this.category,
     );
   }
 }

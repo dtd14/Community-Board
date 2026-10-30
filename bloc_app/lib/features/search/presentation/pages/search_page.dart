@@ -90,7 +90,7 @@ class _SearchViewState extends State<SearchView>
           appBar: AppBar(
             title: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E5E9), // Màu xám nhạt
+                color: Colors.white, // Màu xám nhạt
                 borderRadius: BorderRadius.circular(12), // Bo góc
                 border: Border.all(
                   color: const Color(0xFFD3D6DC), // Màu viền xám nhạt hơn
@@ -104,7 +104,7 @@ class _SearchViewState extends State<SearchView>
                 controller: _searchController,
                 decoration: InputDecoration(
                   icon: const Icon(Icons.search, size: 20),
-                  hintText: 'Search for users or posts...',
+                  hintText: 'Tìm đồng nghiệp hoặc bài viết...',
                   border: InputBorder.none, // Loại bỏ viền mặc định
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
@@ -122,8 +122,8 @@ class _SearchViewState extends State<SearchView>
                   TabBar(
                     controller: _tabController,
                     tabs: const [
-                      Tab(text: 'Users'),
-                      Tab(text: 'Post'),
+                      Tab(text: 'Đồng nghiệp'),
+                      Tab(text: 'Bài viết'),
                     ],
                   ),
                   SizedBox(
@@ -134,13 +134,15 @@ class _SearchViewState extends State<SearchView>
               ),
             ),
           ),
-          body: TabBarView(
+          body: Center(child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 880),
+            child: TabBarView(
             controller: _tabController,
             children: [
               _buildUserResultsTab(context, state),
               _buildPostResultsTab(context, state),
             ],
-          ),
+          ))),
         );
       },
     );
@@ -156,7 +158,7 @@ class _SearchViewState extends State<SearchView>
     }
 
     if (state.query.trim().isEmpty) {
-      return const Center(child: Text('Search for users by their username.'));
+      return const Center(child: Text('Nhập tên để tìm đồng nghiệp.'));
     }
 
     if (state.users.isEmpty && state.status == SearchStatus.loaded) {
@@ -208,7 +210,7 @@ class _SearchViewState extends State<SearchView>
 
     if (query.isEmpty || query.length < 2) {
       return const Center(
-        child: Text('Enter at least 2 characters to search for post.'),
+        child: Text('Nhập ít nhất 2 ký tự để tìm bài viết.'),
       );
     }
 
@@ -217,6 +219,7 @@ class _SearchViewState extends State<SearchView>
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.all(16),
       itemCount: state.posts.length,
       itemBuilder: (context, index) {
         final post = state.posts[index];

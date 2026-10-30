@@ -19,7 +19,7 @@ final class EditProfileSubmitted extends EditProfileEvent {
   final String userId;
   final String? originalAvatarUrl;
   final String username;
-  final File? newAvatarUrl;
+  final UploadImage? newAvatarUrl;
   final bool avatarWasRemoved;
 
   @override

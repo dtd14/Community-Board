@@ -32,7 +32,7 @@ class CommentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUser = context.watch<AuthenticationBloc>().state.user;
-    final currentUserRole = currentUser?.role; 
+    final currentUserRole = currentUser?.role;
 
     final bool canEdit = currentUser?.id == comment.authorId;
     final bool canDelete = canEdit || (currentUserRole == Roles.admin);
@@ -95,7 +95,9 @@ class CommentCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          DateFormat('MM-dd HH:mm').format(comment.createdAt),
+                          DateFormat(
+                            'MM-dd HH:mm',
+                          ).format(comment.createdAt.toLocal()),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],

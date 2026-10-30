@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:domain/media.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:core/utils.dart';
@@ -9,6 +9,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/di.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../widgets/post_badges.dart';
 import '../bloc/post_form/post_form_bloc.dart';
 
 import 'package:image_picker/image_picker.dart';
@@ -27,14 +29,15 @@ class PostFormPage extends StatelessWidget {
         }
         return bloc;
       },
-      child: PostFormView(isEditMode: postId != null),
+      child: PostFormView(isEditMode: postId != null, postId: postId),
     );
   }
 }
 
 class PostFormView extends StatefulWidget {
-  const PostFormView({super.key, required this.isEditMode});
+  const PostFormView({super.key, required this.isEditMode, this.postId});
   final bool isEditMode;
+  final String? postId;
 
   @override
   State<PostFormView> createState() => _PostFormViewState();
@@ -47,13 +50,16 @@ class _PostFormViewState extends State<PostFormView> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
 
-  File? _selectedImage;
+  UploadImage? _selectedImage;
 
   String? _existingImageUrl;
   bool _imageWasRemoved = false;
   PostDisplay? _originalPost;
 
   bool _isSaving = false;
+  String _category = PostCategories.announcement;
+  bool _isPinned = false;
+  bool _requiresAcknowledgement = false;
 
   @override
   void dispose() {
@@ -67,9 +73,12 @@ class _PostFormViewState extends State<PostFormView> {
 
     try {
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      if (!mounted) return;
       if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        if (!mounted) return;
         setState(() {
-          _selectedImage = File(pickedFile.path);
+          _selectedImage = UploadImage(bytes: bytes, name: pickedFile.name);
           _imageWasRemoved = false;
         });
       }
@@ -83,6 +92,8 @@ class _PostFormViewState extends State<PostFormView> {
   }
 
   void _submit(PostDisplay? postToEdit) {
+    if (_isSaving) return;
+    if (widget.isEditMode && postToEdit == null) return;
     setState(() {
       _autovalidateMode = AutovalidateMode.always;
     });
@@ -105,6 +116,9 @@ class _PostFormViewState extends State<PostFormView> {
           newContent: content,
           newImage: _selectedImage,
           imageWasRemoved: _imageWasRemoved,
+          category: _category,
+          isPinned: _isPinned,
+          requiresAcknowledgement: _requiresAcknowledgement,
         ),
       );
     } else {
@@ -113,6 +127,9 @@ class _PostFormViewState extends State<PostFormView> {
           title: title,
           content: content,
           imageFile: _selectedImage,
+          category: _category,
+          isPinned: _isPinned,
+          requiresAcknowledgement: _requiresAcknowledgement,
         ),
       );
     }
@@ -122,8 +139,8 @@ class _PostFormViewState extends State<PostFormView> {
     Widget? imageWidget;
 
     if (_selectedImage != null) {
-      imageWidget = Image.file(
-        _selectedImage!,
+      imageWidget = Image.memory(
+        _selectedImage!.bytes,
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
@@ -176,7 +193,7 @@ class _PostFormViewState extends State<PostFormView> {
               color: Colors.grey,
             ),
             SizedBox(height: 8),
-            Text('Tap to add an image'),
+            Text('Chạm để thêm ảnh minh họa'),
           ],
         ),
       );
@@ -199,6 +216,9 @@ class _PostFormViewState extends State<PostFormView> {
             _titleController.text = _originalPost!.title;
             _contentController.text = _originalPost!.content;
             _existingImageUrl = _originalPost!.imageUrl;
+            _category = _originalPost!.category;
+            _isPinned = _originalPost!.isPinned;
+            _requiresAcknowledgement = _originalPost!.requiresAcknowledgement;
           } else {
             context.pop();
           }
@@ -207,77 +227,191 @@ class _PostFormViewState extends State<PostFormView> {
       builder: (context, state) {
         final isLoading = state is PostFormLoadInProgress;
         final isEditMode = widget.isEditMode;
+        if (isEditMode &&
+            _originalPost == null &&
+            state is PostFormLoadFailure) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Chỉnh sửa bài viết')),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(state.failure.message, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    if (widget.postId != null)
+                      FilledButton(
+                        onPressed: () => context.read<PostFormBloc>().add(
+                          PostFormPrefilled(postId: widget.postId!),
+                        ),
+                        child: const Text('Thử lại'),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
         return Scaffold(
-          appBar: AppBar(title: Text(isEditMode ? 'Edit Post' : 'Create Post')),
+          appBar: AppBar(
+            title: Text(isEditMode ? 'Chỉnh sửa bài viết' : 'Tạo bài viết'),
+          ),
           body: _isSaving || (isLoading && _originalPost == null)
               ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Form(
-                    key: _formkey,
-                    autovalidateMode: _autovalidateMode,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Container(
-                          height: 200,
-                          clipBehavior: Clip.antiAlias,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade400),
-                            borderRadius: BorderRadius.circular(8),
-                            color: Colors.grey.shade100,
-                          ),
-                          child: InkWell(
-                            onTap: isLoading ? null : _pickImage,
-                            child: _buildImagePreview(),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
+              : Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 800),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Form(
+                        key: _formkey,
+                        autovalidateMode: _autovalidateMode,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Chia sẻ thông tin với đồng nghiệp',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Nội dung rõ ràng giúp mọi người cập nhật và phối hợp tốt hơn.',
+                              style: TextStyle(color: AppColors.mutedText),
+                            ),
+                            const SizedBox(height: 24),
+                            DropdownButtonFormField<String>(
+                              initialValue: _category,
+                              decoration: const InputDecoration(
+                                labelText: 'Loại bài viết',
+                                prefixIcon: Icon(Icons.category_outlined),
+                              ),
+                              items: PostCategories.values
+                                  .map(
+                                    (category) => DropdownMenuItem(
+                                      value: category,
+                                      child: Text(postCategoryLabel(category)),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => _category = value);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            Container(
+                              height: 200,
+                              clipBehavior: Clip.antiAlias,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.grey.shade100,
+                              ),
+                              child: InkWell(
+                                onTap: isLoading ? null : _pickImage,
+                                child: _buildImagePreview(),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
 
-                        TextFormField(
-                          controller: _titleController,
-                          decoration: const InputDecoration(
-                            labelText: 'Title',
-                            border: OutlineInputBorder(),
-                          ),
-                          enabled: !isLoading,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter a title';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _titleController,
+                              decoration: const InputDecoration(
+                                labelText: 'Tiêu đề',
+                                hintText: 'Thông tin chính bạn muốn truyền tải',
+                              ),
+                              enabled: !isLoading,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Vui lòng nhập tiêu đề.';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
 
-                        TextFormField(
-                          controller: _contentController,
-                          decoration: const InputDecoration(
-                            labelText: 'Content',
-                            border: OutlineInputBorder(),
-                            alignLabelWithHint: true,
-                          ),
-                          maxLines: 10,
-                          minLines: 5,
-                          enabled: !isLoading,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter content.';
-                            }
-                            return null;
-                          },
-                          keyboardType: TextInputType.multiline,
-                        ),
-                        const SizedBox(height: 24),
+                            TextFormField(
+                              controller: _contentController,
+                              decoration: const InputDecoration(
+                                labelText: 'Nội dung',
+                                alignLabelWithHint: true,
+                              ),
+                              maxLines: 10,
+                              minLines: 5,
+                              enabled: !isLoading,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Vui lòng nhập nội dung.';
+                                }
+                                return null;
+                              },
+                              keyboardType: TextInputType.multiline,
+                            ),
+                            const SizedBox(height: 24),
+                            Card(
+                              margin: EdgeInsets.zero,
+                              child: Column(
+                                children: [
+                                  SwitchListTile(
+                                    title: const Text('Ghim bài viết'),
+                                    subtitle: const Text(
+                                      'Ưu tiên hiển thị ở đầu bảng tin.',
+                                    ),
+                                    secondary: const Icon(
+                                      Icons.push_pin_outlined,
+                                      color: AppColors.primary,
+                                    ),
+                                    value: _isPinned,
+                                    onChanged: (value) =>
+                                        setState(() => _isPinned = value),
+                                  ),
+                                  const Divider(height: 1),
+                                  SwitchListTile(
+                                    title: const Text(
+                                      'Yêu cầu xác nhận đã đọc',
+                                    ),
+                                    subtitle: const Text(
+                                      'Dành cho thông báo hoặc quy định cần theo dõi tiếp nhận.',
+                                    ),
+                                    secondary: const Icon(
+                                      Icons.fact_check_outlined,
+                                      color: AppColors.primary,
+                                    ),
+                                    value: _requiresAcknowledgement,
+                                    onChanged: (value) => setState(
+                                      () => _requiresAcknowledgement = value,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_originalPost?.requiresAcknowledgement == true)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 12),
+                                child: Text(
+                                  'Thay đổi tiêu đề hoặc nội dung sẽ yêu cầu nhân viên xác nhận lại.',
+                                  style: TextStyle(color: AppColors.mutedText),
+                                ),
+                              ),
+                            const SizedBox(height: 24),
 
-                        ElevatedButton(
-                          onPressed: () => _submit(_originalPost),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: Text(isEditMode ? 'Update' : 'Submit'),
+                            ElevatedButton(
+                              onPressed: () => _submit(_originalPost),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                              ),
+                              child: Text(
+                                isEditMode ? 'Lưu thay đổi' : 'Đăng bài viết',
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),

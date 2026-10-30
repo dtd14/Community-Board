@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/blocs/realtime/realtime_bloc.dart';
 import 'core/di/di.dart';
+import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/bloc/authentication/authentication_bloc.dart';
 import 'features/post/presentation/bloc/post_list/post_list_bloc.dart';
 
@@ -58,11 +59,9 @@ class MyApp extends StatelessWidget {
           }
         },
         child: MaterialApp.router(
-          title: 'Community Board Bloc',
+          title: 'Community Board',
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-          ),
+          theme: AppTheme.light,
           routerConfig: getIt<GoRouter>(),
         ),
       ),

@@ -76,8 +76,9 @@ class _LoginViewState extends State<LoginView> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const AuthHeader(
-                title: 'Welcome back',
-                subtitle: 'Sign in to connect with your community',
+                title: 'Chào mừng trở lại',
+                subtitle:
+                    'Đăng nhập để cập nhật thông tin và kết nối đồng nghiệp',
               ),
               const SizedBox(height: 24),
               AuthCard(
@@ -107,7 +108,7 @@ class _LoginViewState extends State<LoginView> {
                       ),
                       const SizedBox(height: 24),
                       AuthSubmitButton(
-                        label: 'Sign in',
+                        label: 'Đăng nhập',
                         isLoading: isLoading,
                         onPressed: _submit,
                       ),
@@ -115,8 +116,8 @@ class _LoginViewState extends State<LoginView> {
                       const Divider(height: 1, color: AppColors.divider),
                       const SizedBox(height: 8),
                       AuthSwitchPrompt(
-                        message: "Don't have an account?",
-                        actionLabel: 'Sign up',
+                        message: "Bạn chưa có tài khoản?",
+                        actionLabel: 'Đăng ký',
                         onPressed: isLoading
                             ? null
                             : () => context.goNamed(RouteNames.signup),

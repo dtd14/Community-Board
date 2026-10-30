@@ -82,8 +82,8 @@ class _SignupViewState extends State<SignupView> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const AuthHeader(
-                title: 'Create account',
-                subtitle: 'Join your community and start connecting',
+                title: 'Tạo tài khoản',
+                subtitle: 'Tham gia không gian thông tin và kết nối đồng nghiệp',
               ),
               const SizedBox(height: 24),
               AuthCard(
@@ -95,7 +95,7 @@ class _SignupViewState extends State<SignupView> {
                     children: [
                       AuthTextField(
                         controller: _usernameController,
-                        label: 'Username',
+                        label: 'Tên hiển thị',
                         hint: 'alex_rivera',
                         prefixIcon: Icons.person_outline,
                         validator: AuthValidators.username,
@@ -123,8 +123,8 @@ class _SignupViewState extends State<SignupView> {
                       const SizedBox(height: 16),
                       PasswordField(
                         controller: _confirmPasswordController,
-                        label: 'Confirm password',
-                        hint: 'Re-enter your password',
+                        label: 'Xác nhận mật khẩu',
+                        hint: 'Nhập lại mật khẩu',
                         validator: AuthValidators.confirmPassword(
                           _passwordController,
                         ),
@@ -134,7 +134,7 @@ class _SignupViewState extends State<SignupView> {
                       ),
                       const SizedBox(height: 24),
                       AuthSubmitButton(
-                        label: 'Create account',
+                        label: 'Tạo tài khoản',
                         isLoading: isLoading,
                         onPressed: _submit,
                       ),
@@ -142,8 +142,8 @@ class _SignupViewState extends State<SignupView> {
                       const Divider(height: 1, color: AppColors.divider),
                       const SizedBox(height: 8),
                       AuthSwitchPrompt(
-                        message: 'Already have an account?',
-                        actionLabel: 'Sign in',
+                        message: 'Bạn đã có tài khoản?',
+                        actionLabel: 'Đăng nhập',
                         onPressed: isLoading
                             ? null
                             : () => context.goNamed(RouteNames.login),

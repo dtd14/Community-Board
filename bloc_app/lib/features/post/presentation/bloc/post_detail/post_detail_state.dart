@@ -9,6 +9,8 @@ class PostDetailState extends Equatable {
     this.failure,
     this.transientFailure,
     this.deletionSuccess = false,
+    this.isAcknowledging = false,
+    this.isLiking = false,
   });
 
   final PostDetailStatus status;
@@ -16,6 +18,8 @@ class PostDetailState extends Equatable {
   final Failures? failure;
   final Failures? transientFailure;
   final bool deletionSuccess;
+  final bool isAcknowledging;
+  final bool isLiking;
 
   @override
   List<Object?> get props => [
@@ -24,6 +28,8 @@ class PostDetailState extends Equatable {
     failure,
     transientFailure,
     deletionSuccess,
+    isAcknowledging,
+    isLiking,
   ];
 
   PostDetailState copyWith({
@@ -32,13 +38,19 @@ class PostDetailState extends Equatable {
     Failures? Function()? failure,
     Failures? Function()? transientFailure,
     bool? deletionSuccess,
+    bool? isAcknowledging,
+    bool? isLiking,
   }) {
     return PostDetailState(
       status: status ?? this.status,
       post: post != null ? post() : this.post,
       failure: failure != null ? failure() : this.failure,
-      transientFailure: transientFailure != null ? transientFailure() : this.transientFailure,
+      transientFailure: transientFailure != null
+          ? transientFailure()
+          : this.transientFailure,
       deletionSuccess: deletionSuccess ?? this.deletionSuccess,
+      isAcknowledging: isAcknowledging ?? this.isAcknowledging,
+      isLiking: isLiking ?? this.isLiking,
     );
   }
 }

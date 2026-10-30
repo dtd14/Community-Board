@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:core/constants.dart';
 import 'package:core/utils.dart';
 import 'package:domain/auth.dart';
@@ -6,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/di.dart';
+import '../widgets/profile_header.dart';
 import '../../../../core/utils/sealed_class_state.dart';
 import '../../../post/presentation/bloc/my_post_list/my_post_list_bloc.dart';
 import '../../../post/presentation/widgets/my_post_list.dart';
@@ -63,7 +63,7 @@ class UserProfileView extends StatelessWidget {
         title: BlocBuilder<UserProfileBloc, UserProfileState>(
           builder: (context, state) {
             final username = state.currentOrPreviousData?.username;
-            return Text(username ?? 'User Profile');
+            return Text(username ?? 'Hồ sơ thành viên');
           },
         ),
       ),
@@ -120,52 +120,28 @@ class _ProfileContent extends StatelessWidget {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
           child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 20),
-                CircleAvatar(
-                  radius: 60,
-                  child: profile.avatarUrl == null
-                      ? const Icon(Icons.person, size: 60)
-                      : ClipOval(
-                          child: CachedNetworkImage(
-                            imageUrl: profile.avatarUrl!,
-                            placeholder: (context, url) =>
-                                const CircularProgressIndicator(strokeWidth: 2),
-                            errorWidget: (context, url, error) =>
-                                const Icon(Icons.error_outline, size: 18),
-                            fit: BoxFit.cover,
-                            width: 120,
-                            height: 120,
-                          ),
-                        ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  profile.username,
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Role: ${profile.role}',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-
-                if (profile.role == Roles.admin) ...[
-                  const SizedBox(height: 32),
-                  const Divider(),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Text(
-                      "${profile.username}'s Posts",
-                      style: Theme.of(context).textTheme.headlineSmall,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 880),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ProfileHeader(profile: profile),
+                  if (profile.role == Roles.admin) ...[
+                    const SizedBox(height: 32),
+                    const Divider(),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        'Bài viết đã chia sẻ',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
                     ),
-                  ),
-                  MyPostList(userId: profile.id),
+                    MyPostList(userId: profile.id),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

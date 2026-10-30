@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'package:domain/media.dart';
+
 
 import 'package:bloc/bloc.dart';
 import 'package:core/errors.dart';
@@ -37,6 +38,7 @@ class PostFormBloc extends Bloc<PostFormEvent, PostFormState> {
     PostSubmitted event,
     Emitter<PostFormState> emit,
   ) async {
+    if (state is PostFormLoadInProgress) return;
     emit(const PostFormLoadInProgress());
 
     String? imageUrl;
@@ -67,6 +69,9 @@ class PostFormBloc extends Bloc<PostFormEvent, PostFormState> {
         title: event.title,
         content: event.content,
         imageUrl: imageUrl,
+        category: event.category,
+        isPinned: event.isPinned,
+        requiresAcknowledgement: event.requiresAcknowledgement,
       ),
     );
 
@@ -99,9 +104,8 @@ class PostFormBloc extends Bloc<PostFormEvent, PostFormState> {
     PostEdited event,
     Emitter<PostFormState> emit,
   ) async {
+    if (state is PostFormLoadInProgress) return;
     emit(const PostFormLoadInProgress());
-
-    await Future.delayed(const Duration(seconds: 1));
 
     try {
       final result = await _updatePostUseCase(
@@ -111,6 +115,9 @@ class PostFormBloc extends Bloc<PostFormEvent, PostFormState> {
           newContent: event.newContent,
           newImageFile: event.newImage,
           imageWasRemoved: event.imageWasRemoved,
+          category: event.category,
+          isPinned: event.isPinned,
+          requiresAcknowledgement: event.requiresAcknowledgement,
         ),
       );
 

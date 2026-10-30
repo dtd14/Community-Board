@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'package:domain/media.dart';
+
 
 import 'package:bloc/bloc.dart';
 import 'package:core/errors.dart';
@@ -41,20 +42,23 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
           avatarWasRemoved: event.avatarWasRemoved,
         ),
       );
-    
-    result.fold(
-      (failure) {
-        emit(EditProfileLoadFailure(failure: failure));
-      },
-      (updatedProfile) {
-        _globalEventBus.add(ProfileUpdatedDispatched(profile: updatedProfile));
 
-        emit(const EditProfileLoadSuccess(data: null));
-      },
-    );
+      result.fold(
+        (failure) {
+          emit(EditProfileLoadFailure(failure: failure));
+        },
+        (updatedProfile) {
+          _globalEventBus.add(
+            ProfileUpdatedDispatched(profile: updatedProfile),
+          );
+
+          emit(const EditProfileLoadSuccess(data: null));
+        },
+      );
     } catch (e) {
-      emit(EditProfileLoadFailure(failure: ServerFailure(message: e.toString())));
+      emit(
+        EditProfileLoadFailure(failure: ServerFailure(message: e.toString())),
+      );
     }
   }
-  
 }

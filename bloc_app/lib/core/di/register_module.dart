@@ -42,7 +42,10 @@ abstract class RegisterModule {
   @LazySingleton(as: PostRepository)
   PostRepositoryImpl get postRepository;
 
-  @LazySingleton(as: RealtimeRemoteDataSource, dispose: disposeRealtimeDataSource)
+  @LazySingleton(
+    as: RealtimeRemoteDataSource,
+    dispose: disposeRealtimeDataSource,
+  )
   SupabaseRealtimeRemoteDataSource get realtimeRemoteDataSource;
 
   @LazySingleton(as: RealtimeRepository)
@@ -91,6 +94,12 @@ abstract class RegisterModule {
 
   @injectable
   ToggleLikeUsecase get toggleLikeUsecase;
+
+  @injectable
+  AcknowledgePostUsecase get acknowledgePostUsecase;
+
+  @injectable
+  GetPostPeopleUsecase get getPostPeopleUsecase;
 
   @injectable
   CreateCommentUsecase get createCommentUsecase;

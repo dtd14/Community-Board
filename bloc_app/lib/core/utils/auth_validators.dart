@@ -4,25 +4,25 @@ import 'package:string_validator/string_validator.dart' as validator;
 abstract final class AuthValidators {
   static String? email(String? value) {
     final v = value?.trim() ?? '';
-    if (v.isEmpty) return 'Please enter your email.';
-    if (!validator.isEmail(v)) return 'Please enter a valid email.';
+    if (v.isEmpty) return 'Vui lòng nhập email.';
+    if (!validator.isEmail(v)) return 'Email chưa đúng định dạng.';
     return null;
   }
 
   static String? password(String? value) {
     final v = value?.trim() ?? '';
     if (v.length < 6 || v.length > 20) {
-      return 'Please enter a password from 6 to 20 characters.';
+      return 'Mật khẩu cần từ 6 đến 20 ký tự.';
     }
     return null;
   }
 
-    static String? username(String? value) {
+  static String? username(String? value) {
     final v = value?.trim() ?? '';
-    if (v.isEmpty) return 'Please enter username.';
-    if (v.length < 2) return 'Please enter at least 2 characters for username.';
+    if (v.isEmpty) return 'Vui lòng nhập tên hiển thị.';
+    if (v.length < 2) return 'Tên hiển thị cần ít nhất 2 ký tự.';
     if (v.length > 20) {
-      return 'Please enter a username up to 20 characters long.';
+      return 'Tên hiển thị tối đa 20 ký tự.';
     }
     return null;
   }
@@ -30,9 +30,11 @@ abstract final class AuthValidators {
   /// Mật khẩu khi đăng ký, có thông báo lỗi chi tiết hơn login.
   static String? newPassword(String? value) {
     final v = value?.trim() ?? '';
-    if (v.isEmpty) return 'Please enter password.';
-    if (v.length < 6) return 'Please enter at least 6 characters for password.';
-    if (v.length > 20) return 'Please enter a password up to 20 characters long.';
+    if (v.isEmpty) return 'Vui lòng nhập mật khẩu.';
+    if (v.length < 6) return 'Mật khẩu cần ít nhất 6 ký tự.';
+    if (v.length > 20) {
+      return 'Mật khẩu tối đa 20 ký tự.';
+    }
     return null;
   }
 

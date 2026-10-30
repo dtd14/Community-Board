@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:domain/media.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:core/utils.dart';
@@ -37,7 +37,7 @@ class _EditProfileViewState extends State<EditProfileView> {
   AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
   final _usernameController = TextEditingController();
 
-  File? _selectedImage;
+  UploadImage? _selectedImage;
   String? _existingImageUrl;
   bool _imageWasRemoved = false;
 
@@ -66,8 +66,10 @@ class _EditProfileViewState extends State<EditProfileView> {
       );
 
       if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        if (!mounted) return;
         setState(() {
-          _selectedImage = File(pickedFile.path);
+          _selectedImage = UploadImage(bytes: bytes, name: pickedFile.name);
           _imageWasRemoved = false;
         });
       }
@@ -180,7 +182,7 @@ class _EditProfileViewState extends State<EditProfileView> {
     Widget imageWidget;
 
     if (_selectedImage != null) {
-      imageWidget = Image.file(_selectedImage!, fit: BoxFit.cover);
+      imageWidget = Image.memory(_selectedImage!.bytes, fit: BoxFit.cover);
     } else if (_existingImageUrl != null && !_imageWasRemoved) {
       imageWidget = CachedNetworkImage(
         imageUrl: _existingImageUrl!,

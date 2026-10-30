@@ -12,13 +12,26 @@ final class PostSubmitted extends PostFormEvent {
     required this.title,
     required this.content,
     this.imageFile,
+    this.category = PostCategories.announcement,
+    this.isPinned = false,
+    this.requiresAcknowledgement = false,
   });
 
   final String title;
   final String content;
-  final File? imageFile;
+  final UploadImage? imageFile;
+  final String category;
+  final bool isPinned;
+  final bool requiresAcknowledgement;
   @override
-  List<Object?> get props => [title, content, imageFile];
+  List<Object?> get props => [
+    title,
+    content,
+    imageFile,
+    category,
+    isPinned,
+    requiresAcknowledgement,
+  ];
 }
 
 final class PostFormPrefilled extends PostFormEvent {
@@ -37,13 +50,19 @@ final class PostEdited extends PostFormEvent {
     required this.newContent,
     this.newImage,
     this.imageWasRemoved = false,
+    this.category = PostCategories.announcement,
+    this.isPinned = false,
+    this.requiresAcknowledgement = false,
   });
 
   final PostDisplay originalPost;
   final String newTitle;
   final String newContent;
-  final File? newImage;
+  final UploadImage? newImage;
   final bool imageWasRemoved;
+  final String category;
+  final bool isPinned;
+  final bool requiresAcknowledgement;
 
   @override
   List<Object?> get props => [
@@ -52,5 +71,8 @@ final class PostEdited extends PostFormEvent {
     newContent,
     newImage,
     imageWasRemoved,
+    category,
+    isPinned,
+    requiresAcknowledgement,
   ];
 }
